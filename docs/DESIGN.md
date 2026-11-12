@@ -40,9 +40,9 @@ The handoff today is by file: a PDF, a .vcf and a `pace-snap-responder-1` CSV go
 
 ### Next steps for the bridge
 
-1. **Import in the public safety app.** Read `pace-snap-responder-1` CSV files into an Agency, State or Region plan as partner contacts or backup methods, with the review-by date shown and a warning once it passes. This needs a change in the `jdlee77/pacesnap` repository.
+1. **Import in the public safety app.** Done in `jdlee77/pacesnap`: Agency, State and Region plans have a Private-sector partners section that imports `pace-snap-responder-1` CSVs (one file, many files, or a combined directory), flags draft and overdue sheets, and exports a partner directory as PDF or CSV. Partner numbers are kept out of the agency's shared plan.
 2. **Reverse export.** A matching export from the public safety app (for example `pace-snap-agency-1`), so a company's Sector or Crosswalk plan can import the county or state EOC and private-sector liaison contacts.
-3. **Directory roll-up.** An emergency management office or fusion center collects many companies' CSVs into one directory, sorted by sector and location, and flags sheets that are overdue for review.
+3. **Directory roll-up.** Partly done: the partner directory CSV re-exports in the same schema. Still to do: sort and filter by sector and location, and a sector field on the company sheet.
 4. **Verification.** A shared, offline-friendly verification practice (for example, a callback through the published dispatch line) that both apps print on their sheets.
 
 ## Open questions for the team

@@ -63,7 +63,7 @@ Three exports, all marked for public safety use only, with a review-by date 90 d
 
 - **Responder contact sheet (PDF)**: one page, for the 911 center and the EOC.
 - **Phone contacts (.vcf)**: loads straight into a responder's or duty officer's phone, with each number labeled P, A, C or E.
-- **Dispatch / EOC import (CSV)**: schema `pace-snap-responder-1`, one row per rung and per location, for dispatch premise files and EOC private-sector directories.
+- **Dispatch / EOC import (CSV)**: schema `pace-snap-responder-1`, one row per rung and per location, for dispatch premise files and EOC private-sector directories. Agencies using PACE Snap for public safety import it directly into the **Private-sector partners** section of an Agency, State or Region plan, which flags drafts and overdue sheets and exports a combined partner directory.
 
 Until every check passes, the exports are marked Draft.
 
