@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>PACE Snap</title>
+<title>PACE Snap Business</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -162,6 +162,15 @@ input[type=text],select{background:var(--panel-2);border:1px solid var(--line);b
 .trig{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px dashed var(--line);border-radius:8px;margin-left:20px}
 .trig .arrow{font-family:var(--f-mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 
+/* crosswalk */
+table.xwm th,table.xwm td{text-align:center;padding:4px}
+table.xwm td:first-child,table.xwm th:first-child{text-align:left;min-width:150px}
+table.xwm td.self{color:var(--muted)}
+.dep{width:100%;min-width:60px;border:1px solid var(--line);border-radius:4px;padding:4px 2px;font-size:11.5px;background:var(--panel-2);color:var(--muted);cursor:pointer}
+.dep.lv1{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.dep.lv2{background:var(--bad-bg);color:var(--bad);border-color:var(--bad);font-weight:600}
+.chip.okc{border-color:var(--good);color:var(--good)}.chip.noc{border-color:var(--bad);color:var(--bad);white-space:normal}
+
 /* tables */
 .tw{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:13.5px}
@@ -237,6 +246,7 @@ textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:12px;ba
 <main><div class="wrap">
   <div id="head" style="display:contents"></div>
   <div id="fns" style="display:contents"></div>
+  <div id="xw" style="display:contents"></div>
   <div id="kit" style="display:contents"></div>
   <div id="plan" style="display:contents"></div>
   <div id="matrix" style="display:contents"></div>
@@ -254,240 +264,205 @@ const LEVELS=[
  {k:'A',name:'Alternate',c:'a',blurb:'Common backup on a different path.'},
  {k:'C',name:'Contingency',c:'c',blurb:'Strategic fallback.'},
  {k:'E',name:'Emergency',c:'e',blurb:'Last resort. Expect delays.'}];
-const PATHS={att:'AT&T RAN',vz:'Verizon RAN',tmo:'T-Mobile RAN',wire:'Wireline',net:'Internet/cloud',starlink:'Starlink',msat:'Phone sat',iridium:'Iridium',lmr:'Agency LMR',slmr:'State/regional LMR',issi:'ISSI / radio interconnect',xb:'Cross-border link',dep:'Deployable comms',rptr:'Ham repeater',simplex:'RF simplex',prptr:'Portable repeater',manet:'MANET mesh',hf:'HF skywave',mesh:'LoRa mesh',human:'Runner / on foot',fiber:'Fiber/WAN',isp:'ISP plant',mw:'Microwave',geo:'GEO satellite',ipaws:'IPAWS',sirens:'Sirens',bcast:'Broadcast',mass:'Mass-notice service',nawas:'NAWAS circuit'};
-const CONDS={grid:'site power',fuel:'generator fuel',sky:'open sky',los:'line of sight',lic:'license',far:'far end staffed'};
-const TYPES={voice:'Voice / live coordination',data:'Data / information systems',alert:'Public alerting',any:'Any path'};
+const PATHS={att:'AT&T network',vz:'Verizon network',tmo:'T-Mobile network',pstn:'Landline network (PSTN)',isp:'Home / local ISP',net:'Internet / cloud',idp:'Company login (SSO / email tenant)',wan:'Corporate network / data center',mass:'Mass-notification provider',vendor:'Call-center provider',bridge:'Conference-bridge provider',web:'Separate status host',bcast:'Broadcast media',govnet:'Government portal',starlink:'Starlink',msat:'Phone satellite',iridium:'Iridium',geo:'GEO satellite',radio:'On-site radio system',simplex:'Radio direct (simplex)',hf:'HF skywave',mesh:'LoRa mesh',bldg:'Building systems',human:'People / in person'};
+const CONDS={grid:'site power',fuel:'generator fuel',site:'building access',sky:'open sky',los:'line of sight',lic:'license / enrollment',far:'far end staffed'};
+const TYPES={voice:'Voice / live coordination',data:'Data / business systems',alert:'Mass notification / public messaging',any:'Any path'};
 const TCH={voice:'v',data:'d',alert:'a'};
-const TYPES_S={voice:'Voice',data:'Data',alert:'Alerting',any:'Any path'};
+const TYPES_S={voice:'Voice',data:'Data',alert:'Notification',any:'Any path'};
 const RATE=[['Power','battery / fuel'],['Availability','monitored, tested'],['Compatibility','far end can receive'],['Ease','usable under stress']];
 const CAD={weekly:7,monthly:30,quarterly:90,annually:365};
 const DEFCAD=['weekly','monthly','monthly','quarterly'];
-const DEFTRIG=['No answer after 3 attempts in 15 minutes','You know the carrier or network is down','No answer or reply within 1 hour'];
-const TRIG_EVENTS=[{id:'nocontact',name:'Callers cannot reach the rungs above'},{id:'eoc',name:'Plan or EOC activated'}];
+const DEFTRIG=['No answer after 3 attempts in 15 minutes','You know the network, system or carrier is down','No answer or reply within 1 hour'];
+const TRIG_EVENTS=[{id:'nocontact',name:'Callers cannot reach the rungs above'},{id:'bcp',name:'Crisis or continuity plan activated'},{id:'cyber',name:'Cyber incident declared (go out-of-band)'}];
 const EVN=Object.fromEntries(TRIG_EVENTS.map(e=>[e.id,e.name]));
 const MONLAB={always:'Always (24/7)',hours:'Business hours only',trig:'When triggered',sched:'Scheduled check-ins'};
 const OFF=new Set(['night']);
-const DEFT=['nocontact','eoc'];
-const MONOVR={desk:{m:'hours'},home:{m:'hours'},runner:{m:'trig',t:['nocontact','eoc']}};
+const DEFT=['nocontact','bcp'];
+const MONOVR={pots:{m:'hours'},home:{m:'hours'},teams:{m:'hours'},app:{m:'hours'},oob:{m:'trig',t:['cyber','bcp','nocontact']},rally:{m:'trig',t:['nocontact','bcp']},runner:{m:'trig',t:['nocontact','bcp']},liaison:{m:'trig',t:['bcp']}};
 function monDefault(a){const o=MONOVR[a.id];if(o)return{m:o.m,t:o.t||[],rd:'15 minutes',sched:''};return (a.bw??3)<=1?{m:'always',t:[],rd:'',sched:''}:{m:'trig',t:[...DEFT],rd:'15 minutes',sched:''}}
 function monEff(f,id){const sv=(S.mon[f]||{})[id];return{...monDefault(asset(id)),...(sv||{}),confirmed:!!sv}}
 function monSet(f,id){S.mon[f]=S.mon[f]||{};return S.mon[f][id]=S.mon[f][id]||{}}
 function monShort(m){if(!m)return'';if(m.m==='always')return'Monitored 24/7';if(m.m==='hours')return'Business hours only';if(m.m==='sched')return'Scheduled: '+(m.sched||'(add schedule)');return'When: '+((m.t||[]).map(e=>EVN[e]).join(', ')||'(add a trigger)')+(m.rd?' | ready in '+m.rd:'')}
+/* A triggered rung is listening in a drill when: the rungs above have failed (nocontact), the plan is activated (assumed in every drill), or the drill is a cyber incident (cyber). */
 function isMon(R,sc,upper){const m=R.mon;if(!m||m.m==='always')return true;if(m.m==='hours'||m.m==='sched')return !OFF.has(sc.id);
- return (m.t||[]).some(e=>e==='nocontact'?upper:e==='eoc')}
+ return (m.t||[]).some(e=>e==='nocontact'?upper:e==='cyber'?sc.hz==='cyber':e==='bcp')}
 const monWhy=R=>{const m=R.mon||{};return m.m==='hours'?'business hours only':m.m==='sched'?'scheduled check-ins only':'starts on: '+(((m.t||[]).map(e=>EVN[e]).join(', '))||'no trigger set')};
 
-const ASSETS_P=[
- {id:'firstnet',g:'Cellular',name:'FirstNet device',path:['att'],cond:['grid'],r:[2,3,3,3],bw:1,m:'Voice / SMS / data',t:'Keep priority and preemption active, and keep a non-AT&T path below it.',note:'Band 14 with priority and preemption. Rides the AT&T network.'},
- {id:'attc',g:'Cellular',name:'AT&T commercial line',path:['att'],cond:['grid'],r:[2,3,3,3],bw:1,m:'Voice / SMS',t:'Same network as FirstNet. Never stack the two in one ladder.',note:'Same RAN and core as FirstNet.'},
- {id:'vz',g:'Cellular',name:'Verizon line (Frontline)',path:['vz'],cond:['grid'],r:[2,3,3,3],bw:1,m:'Voice / SMS',t:'A different carrier core than AT&T, so a single-carrier outage won\'t take both.',note:'Separate RAN and core.'},
- {id:'tmo',g:'Cellular',name:'T-Mobile line (T-Priority)',path:['tmo'],cond:['grid'],r:[2,3,3,3],bw:1,m:'Voice / SMS',t:'A different carrier core than AT&T, so a single-carrier outage won\'t take both.',note:'Separate RAN and core.'},
- {id:'b4ps',g:'Wireline & IP',name:'Bridge 4 Public Safety (B4PS)',path:['net'],cond:['grid'],r:[2,2,2,3],bw:2,m:'App: push-to-talk / messaging / voice',t:'An internet-delivered app, so it rides whatever data link the phone has. Keep the app logged in and know which carrier or Wi-Fi it is using. It shares the Internet/cloud path with VoIP and WAN rungs.',note:'Bridge 4 Public Safety interoperable communications app over any data link.'},
- {id:'desk',g:'Wireline & IP',name:'Office VoIP / Teams',path:['wire','net'],cond:['grid'],r:[1,3,3,3],bw:1,m:'Voice / Teams / email',t:'Works only at your desk, with building power and cloud services up.',note:'Needs building power, LAN, and cloud services.'},
- {id:'home',g:'Wireline & IP',name:'Home broadband (Wi-Fi calling, email)',path:['wire','net'],cond:['grid'],r:[1,3,3,3],bw:1,m:'Wi-Fi calling / email',t:'The ISP plant needs grid power. Put a UPS on the modem and router.',note:'ISP plant needs power. Email still needs the cloud.'},
- {id:'starlink',g:'Satellite',name:'Starlink terminal',path:['starlink','net'],cond:['sky'],r:[1,2,3,2],bw:2,m:'Data: email, Teams, web',t:'Pre-stage it with a clear sky view and a battery or 12V supply. It restores IP, but cloud apps still need the internet.',note:'Restores IP, but cloud apps still need the internet. Power-hungry.'},
- {id:'d2c',g:'Satellite',name:'Direct-to-cell satellite text',path:['starlink'],cond:['sky'],r:[3,2,2,2],bw:3,m:'Satellite SMS',t:'Text only and slow, but it runs on the phone already in your pocket with no tower in range.',note:'Text from a phone with no terrestrial signal. Same constellation as Starlink.'},
- {id:'msat',g:'Satellite',name:'Phone satellite SOS / messaging',path:['msat'],cond:['sky'],r:[3,2,1,2],bw:3,m:'Satellite SOS / text',t:'Limited to SOS and a few contacts. Pre-register those contacts now.',note:'Built into newer phones. Limited recipients.'},
- {id:'inreach',g:'Satellite',name:'Iridium messenger (inReach)',path:['iridium'],cond:['sky'],r:[3,3,2,2],bw:3,m:'Two-way satellite text',t:'Multi-day battery and two-way text. Pre-load contacts and preset messages.',note:'Two-way text, global coverage, long battery.'},
- {id:'satphone',g:'Satellite',name:'Iridium satellite phone',path:['iridium'],cond:['sky'],r:[2,2,2,1],bw:3,m:'Satellite voice',t:'You must step outside with sky view. Practice the dialing format before you need it.',note:'Voice anywhere with sky view. You step outside to use it.'},
- {id:'lmr',g:'Radio',name:'Agency LMR portable (P25)',path:['lmr'],cond:['los'],r:[2,3,2,3],bw:2,m:'Voice (talkgroup)',t:'Hardened, generator-backed public safety sites. Know your interop talkgroups by heart.',note:'Hardened sites, but backhaul and coverage limits apply.'},
- {id:'rptr',g:'Radio',name:'Amateur VHF/UHF repeater',path:['rptr'],cond:['grid','lic','los'],r:[2,2,2,3],bw:3,m:'Voice (repeater)',t:'The repeater needs site power. Know the simplex fallback frequency.',note:'Repeater needs site power and someone listening.'},
- {id:'simplex',g:'Radio',name:'GMRS / amateur simplex',path:['simplex'],cond:['los','lic'],r:[3,2,1,3],bw:3,m:'Voice (simplex)',t:'Zero infrastructure, short range. Pre-agree the frequency with your far end.',note:'No infrastructure. Range is short.'},
- {id:'hf',g:'Radio',name:'Amateur HF / Winlink',path:['hf'],cond:['lic','far'],r:[2,2,2,1],bw:4,m:'Voice / Winlink email',t:'Reaches past the impact area. Schedule net times so someone is listening.',note:'Long-haul with no infrastructure. Needs skill and propagation.'},
- {id:'shares',g:'Radio',name:'SHARES HF',path:['hf'],cond:['lic','far'],r:[2,2,3,1],bw:4,m:'Voice / ALE',t:'Get on the SHARES roster and check into nets before the event, not during it.',note:'CISA program for national security and emergency preparedness users. Same medium as amateur HF.'},
- {id:'mesh',g:'Radio',name:'Meshtastic / LoRa mesh',path:['mesh'],cond:['los'],r:[3,1,1,2],bw:4,m:'Mesh text',t:'Only as good as node density. Seed nodes at home and at work.',note:'Text over off-grid mesh. Depends on node density.'},
- {id:'runner',g:'Analog',name:'Runner / pre-set rally point',path:['human'],cond:[],r:[3,3,3,2],bw:5,m:'Written message / rally point',t:'Needs no technology at all. Write down the rally point, time window, and message format now.',note:'If no contact by a set time, go to a known place. Slow but certain.'}];
-const pick=(ids,u,over={})=>ids.map(id=>({...ASSETS_P.find(a=>a.id===id),...(u?{u}:{}),...(over[id]||{})}));
+/* Asset library. r = [Power, Availability, Compatibility, Ease], 1 weak to 3 strong.
+   via = delivered over any one of these networks: the rung fails only when all of them are down (e.g. a dial-in bridge needs some phone network).
+   bw = everyday rank: 1 is an everyday primary, 5 is a last resort. u = suits voice (v), data (d), notification (a); blank suits all. */
+const LIB={
+ m_att:{g:'Mobile',name:'Mobile on AT&T',path:['att'],cond:['grid'],r:[2,3,3,3],bw:1,m:'Voice / SMS',t:'Company-issued or personal. Critical infrastructure staff may qualify for FirstNet or Wireless Priority Service (WPS). Keep a non-AT&T path below it.',note:'Pick the carrier the phone really uses. Cell sites need power.'},
+ m_vz:{g:'Mobile',name:'Mobile on Verizon',path:['vz'],cond:['grid'],r:[2,3,3,3],bw:1,m:'Voice / SMS',t:'A different carrier core from AT&T and T-Mobile, so a single-carrier outage will not take both. Ask about Wireless Priority Service (WPS) if you support critical infrastructure.',note:'Separate network and core.'},
+ m_tmo:{g:'Mobile',name:'Mobile on T-Mobile',path:['tmo'],cond:['grid'],r:[2,3,3,3],bw:1,m:'Voice / SMS',t:'A different carrier core from AT&T and Verizon, so a single-carrier outage will not take both. Ask about T-Priority or WPS if you support critical infrastructure.',note:'Separate network and core.'},
+ teams:{g:'Company systems',name:'Company email & chat (Teams / Slack)',path:['idp','net'],cond:['grid'],r:[2,3,3,3],bw:1,m:'Email / chat / video',t:'It logs in with company credentials, so a cyber incident or SSO outage takes it down along with everything else that uses them. Never let it be the only path in a cyber incident, and assume an attacker may be reading it.',note:'Rides the company login and the cloud.'},
+ app:{g:'Company systems',name:'Workforce app (scheduling / HR / shift app)',path:['idp','net'],cond:['grid'],r:[2,2,3,3],bw:2,m:'App messages / push',t:'In most companies it uses the same login as email, so it fails with it. Check whether it has a separate login before relying on it.',note:'Usually shares the company login.'},
+ wan:{g:'Company systems',name:'Corporate network apps (ERP, ticketing, intranet)',path:['wan','idp'],cond:['fuel'],r:[2,3,3,3],bw:1,u:'d',m:'Business systems / tickets',t:'The first thing a cyber incident takes. Keep a written manual workaround for every critical process that runs on it.',note:'Your data center or private cloud, behind the company login.'},
+ oob:{g:'Company systems',name:'Out-of-band crisis platform (no company login)',path:['net'],cond:[],r:[2,3,2,2],bw:2,m:'Secure chat / voice / files',t:'Set it up on a separate account or tenant that does not use company SSO, so it survives a compromise of email and identity. Pre-enroll the team, practice with it, and keep the credentials offline.',note:'Separate from the company login. Rides the internet.'},
+ bridge:{g:'Company systems',name:'Standing conference bridge (dial-in)',path:['bridge'],via:['att','vz','tmo','pstn'],cond:[],r:[3,3,3,3],bw:1,u:'v',m:'Voice conference',t:'Use a provider separate from your company phone system, and print the number and PIN on a wallet card. Callers still need a working phone, so a carrier outage hurts it less than a login outage.',note:'Hosted by a provider. Any phone can dial in.'},
+ mns:{g:'Company systems',name:'Mass notification (text / voice / email blast)',path:['mass'],via:['att','vz','tmo'],cond:[],r:[2,3,3,3],bw:1,u:'a',m:'Text / voice / email blast',t:'Hosted by a provider separate from your systems, but it still needs carriers to deliver. Keep the contact list synced from HR and send a real test message each quarter.',note:'Third-party service. One-way unless you turn on replies.'},
+ hotline:{g:'Company systems',name:'Employee emergency hotline (third-party)',path:['vendor'],via:['att','vz','tmo','pstn'],cond:[],r:[3,3,3,3],bw:2,u:'va',m:'Recorded updates / check-in line',t:'A toll-free number hosted outside your company, so it works when your systems do not. Print it on the back of every badge.',note:'Callers hear updates and can leave their status.'},
+ pots:{g:'Landline',name:'Site landline (copper POTS)',path:['pstn'],cond:['site'],r:[3,2,3,3],bw:1,u:'v',m:'Voice',t:'Copper lines are powered by the phone company, so they often work in a blackout. Many are being retired: confirm yours is really copper and not VoIP in disguise.',note:'Only works where you are. Needs access to the building.'},
+ gets:{g:'Landline',name:'GETS priority calling card',path:['pstn'],cond:['lic'],r:[3,3,3,2],bw:3,u:'v',m:'Priority voice',t:'A free CISA service for critical infrastructure staff who qualify. Calls get priority through a congested phone network. Practice the dialing sequence, and pair it with WPS on mobiles.',note:'Priority across the public phone network. Needs enrollment.'},
+ home:{g:'Landline',name:'Home broadband (Wi-Fi calling, personal email)',path:['isp','net'],cond:['grid'],r:[1,3,3,3],bw:1,m:'Wi-Fi calling / personal email',t:'Put a UPS on the modem and router. Personal email avoids the company login, so it can still work in a cyber incident.',note:'The ISP plant needs grid power.'},
+ radio:{g:'Radio',name:'Site two-way radios (business band)',path:['radio'],cond:['los'],r:[2,3,3,3],bw:2,u:'v',m:'Voice (channel / talkgroup)',t:'Works across the site without the phone network. Keep spares charged and a channel card on every radio. If it uses a repeater, know the direct (talkaround) channel.',note:'Your own radio system. A repeater needs power.'},
+ frs:{g:'Radio',name:'FRS / GMRS walkie-talkies',path:['simplex'],cond:['los'],r:[3,2,2,3],bw:3,u:'v',m:'Voice (simplex)',t:'No towers and cheap. Range is short, so pre-agree the channel and a meeting point. GMRS needs an FCC license.',note:'Radio to radio with no infrastructure.'},
+ shares:{g:'Radio',name:'SHARES HF radio',path:['hf'],cond:['lic','far'],r:[2,2,3,1],bw:4,u:'vd',m:'Voice / ALE',t:'CISA\'s HF program is open to critical infrastructure organizations. Enroll, train an operator, and check into the nets before you need it.',note:'Long-haul radio with no infrastructure. Needs a trained operator.'},
+ mesh:{g:'Radio',name:'LoRa mesh texting (Meshtastic)',path:['mesh'],cond:['los'],r:[3,1,1,2],bw:4,u:'d',m:'Mesh text',t:'Only as good as node density. Seed nodes at work and at home, and agree on a channel.',note:'Off-grid text. Depends on how many nodes are nearby.'},
+ starlink:{g:'Satellite',name:'Starlink terminal',path:['starlink','net'],cond:['sky'],r:[1,2,3,2],bw:2,m:'Data: email, chat, web',t:'Pre-stage it with a clear sky view and a battery or generator. It restores internet, but anything that needs the company login is still down in a cyber incident.',note:'Restores internet. Power-hungry.'},
+ geo:{g:'Satellite',name:'GEO satellite (VSAT / BGAN)',path:['geo'],cond:['sky'],r:[2,3,3,2],bw:3,u:'vd',m:'IP data / voice',t:'Independent of Starlink and of the ground network. Pre-position the dish and know who aligns it.',note:'Geostationary satellite service.'},
+ d2c:{g:'Satellite',name:'Direct-to-cell satellite text',path:['starlink'],cond:['sky'],r:[3,2,2,2],bw:3,m:'Satellite SMS',t:'Text only and slow, but it runs on the phone already in your pocket with no tower in range.',note:'Text from a phone with no cell signal. Same constellation as Starlink.'},
+ msat:{g:'Satellite',name:'Phone satellite SOS / messaging',path:['msat'],cond:['sky'],r:[3,2,1,2],bw:3,m:'Satellite SOS / text',t:'Limited to SOS and a few contacts. Pre-register your manager and household now.',note:'Built into newer phones. Limited recipients.'},
+ inreach:{g:'Satellite',name:'Iridium messenger (inReach)',path:['iridium'],cond:['sky'],r:[3,3,2,2],bw:3,m:'Two-way satellite text',t:'Multi-day battery and two-way text. Pre-load contacts and preset messages such as "Safe, site closed, need fuel".',note:'Two-way text, global coverage, long battery.'},
+ satphone:{g:'Satellite',name:'Iridium satellite phone',path:['iridium'],cond:['sky'],r:[2,2,2,1],bw:3,u:'v',m:'Satellite voice',t:'You must step outside with a clear sky view. Practice the dialing format before you need it.',note:'Voice anywhere with sky view.'},
+ pa:{g:'On site',name:'Site PA / emergency alarm system',path:['bldg'],cond:['grid','site'],r:[2,3,3,3],bw:1,u:'a',m:'Announcement / alarm',t:'Reaches everyone on site at once. Confirm the battery backup and who is allowed to trigger it.',note:'Building systems. Reaches only people on site.'},
+ status:{g:'Public channels',name:'Public status page',path:['web'],cond:[],r:[2,3,3,3],bw:1,u:'a',m:'Web updates',t:'Host it with a provider separate from your main website and company login, so it stays up when they do not.',note:'Customers and partners check it first.'},
+ social:{g:'Public channels',name:'Company social media accounts',path:['net'],cond:[],r:[2,3,3,3],bw:1,u:'a',m:'Posts / direct messages',t:'Fast and far-reaching. Protect the accounts with multi-factor sign-in that does not depend on company SSO, and keep holding statements pre-approved.',note:'Rides the internet, not your systems.'},
+ media:{g:'Public channels',name:'Broadcast media (press release, local TV and radio)',path:['bcast'],cond:[],r:[3,2,3,2],bw:3,u:'a',m:'News release / interview',t:'Reaches people with no data. Keep pre-approved holding statements and newsroom contacts in the crisis kit.',note:'Media carry your message to the public.'},
+ cc:{g:'Public channels',name:'Customer contact center (outsourced overflow)',path:['vendor'],via:['att','vz','tmo','pstn'],cond:[],r:[2,3,3,3],bw:1,u:'va',m:'Voice / chat',t:'An overflow agreement with an outside provider keeps customers answered when your own center is down. Pre-load the scripts.',note:'Third-party agents answer for you.'},
+ isac:{g:'Sector channels',name:'ISAC portal, listserv & alerts',path:['net'],cond:[],r:[2,3,3,3],bw:1,u:'da',m:'Portal / email alerts',t:'Fast for routine sharing. It rides the internet and often email, so pair it with a voice bridge.',note:'Member portal and mailing lists.'},
+ hsin:{g:'Government channels',name:'HSIN-CI / government information-sharing portal',path:['govnet','net'],cond:[],r:[2,2,2,2],bw:2,u:'d',m:'Portal / secure messaging',t:'The DHS portal for critical infrastructure partners. Get accounts for several staff before an incident and join your sector\'s community.',note:'Government-run portal over the internet.'},
+ webeoc:{g:'Government channels',name:'Shared operating picture (WebEOC / BEOC portal)',path:['govnet','net'],cond:[],r:[2,3,2,3],bw:1,u:'d',m:'Status boards / resource requests',t:'Where government and private partners post status and requests. Confirm your accounts and the offline procedure if it is down.',note:'Common operating picture shared with the government EOC.'},
+ liaison:{g:'In person',name:'Liaison seat at the government EOC',path:['human'],cond:[],r:[3,3,3,3],bw:4,m:'In person',t:'A trained person at the state or county EOC carries messages both ways when every network is down. Pre-assign them and agree how they get there.',note:'People, not networks.'},
+ rally:{g:'In person',name:'Pre-set rally point / report-to location',path:['human'],cond:[],r:[3,3,3,2],bw:5,m:'In person',t:'Needs no technology. Write down where to go, when, and what to report: name, status, and what you need.',note:'If you cannot reach anyone by a set time, go to a known place.'},
+ runner:{g:'In person',name:'Runner / courier',path:['human'],cond:[],r:[3,3,3,2],bw:5,m:'Written message',t:'Needs no technology. Pre-assign who runs, the route, and a message form.',note:'Slow but certain.'}};
+const pick=(ids,over={})=>ids.map(id=>({id,...LIB[id],...(over[id]||{})}));
 
-const ASSETS_U=[
- ...pick(['firstnet','vz','tmo','b4ps'],'vd'),
- {id:'u_lmr',g:'Radio',name:'Agency P25 talkgroups',path:['lmr'],cond:['los'],r:[2,3,3,3],u:'v',bw:1,m:'Voice (talkgroup)',t:'Your own system, so compatibility is highest. Check coverage in your operating area and carry spare batteries.',note:'Your agency system. Coverage and site power apply.'},
- {id:'u_interop',g:'Radio',name:'Statewide interop / mutual-aid talkgroups',path:['slmr'],cond:['los'],r:[2,2,2,3],u:'v',bw:2,m:'Voice (interop talkgroup)',t:'A different system from your agency\'s, so it survives an agency-system failure. Confirm the talkgroups are programmed in every radio.',note:'Separate system from your agency radios.'},
- {id:'u_tac',g:'Radio',name:'VHF/UHF tactical simplex (ICS 205 channels)',path:['simplex'],cond:['los'],r:[3,3,3,3],u:'v',bw:2,m:'Voice (tactical channel)',t:'Zero infrastructure and every team radio can do it. Range is the limit, so plan relay points.',note:'Direct radio-to-radio. No infrastructure.'},
- {id:'u_xband',g:'Radio',name:'Portable repeater / cross-band',path:['prptr'],cond:['los'],r:[2,2,3,3],u:'v',bw:3,m:'Voice (repeater)',t:'Extends tactical range over terrain. It needs a battery and a stable high-ground position.',note:'Deployed by the COML. Extends tactical simplex.'},
- {id:'u_manet',g:'Radio',name:'TAK over MANET / mesh radios',path:['manet'],cond:['los'],r:[3,2,3,2],u:'d',bw:2,m:'TAK position + chat',t:'Works with no cell or internet. Keep every team on the same radio and key set.',note:'Position and text with no infrastructure.'},
- ...pick(['starlink'],'vd',{starlink:{r:[2,2,3,2]}}),
- ...pick(['inreach'],'vd'),
- ...pick(['hf','shares'],'vd'),
- ...pick(['mesh'],'d'),
- ...pick(['runner'],'vd')];
-
-const ASSETS_A=[
- ...pick(['firstnet','vz','tmo','b4ps'],'vd'),
- {id:'g_lmr',g:'Radio',name:'Agency P25 LMR system',path:['lmr'],cond:['fuel'],r:[3,3,3,3],u:'v',bw:1,m:'Voice (dispatch talkgroups)',t:'Hardened, generator-backed sites. Confirm backhaul redundancy and fuel resupply contracts.',note:'Your own radio system. Depends on site generators and backhaul.'},
- {id:'g_slmr',g:'Radio',name:'Statewide / regional radio system',path:['slmr'],cond:['fuel'],r:[2,3,2,2],u:'v',bw:2,m:'Voice (interop talkgroups)',t:'Separate system from your own. Test the roaming and talkgroup agreements.',note:'Independent network that backs up your own.'},
- {id:'g_conv',g:'Radio',name:'Conventional VHF/UHF direct-mode',path:['simplex'],cond:['los'],r:[3,3,3,3],u:'v',bw:3,m:'Voice (simplex)',t:'Works with no infrastructure. Short range, so pre-assign relay positions.',note:'Radio to radio with no sites at all.'},
- {id:'g_wan',g:'Wireline & IP',name:'Agency WAN / fiber (VoIP, email, WebEOC, CAD)',path:['fiber','net'],cond:['fuel'],r:[2,3,3,3],u:'vd',bw:1,m:'VoIP / email / WebEOC',t:'Depends on facility power and upstream cloud services. Keep a documented offline procedure.',note:'Your enterprise network and hosted services.'},
- {id:'g_isp',g:'Wireline & IP',name:'Commercial ISP broadband',path:['isp','net'],cond:['grid'],r:[1,3,3,3],u:'vd',bw:1,m:'Internet / VPN',t:'ISP plant needs grid power. Use a different ISP from your WAN carrier.',note:'Carrier-provided internet.'},
- {id:'g_mw',g:'Wireline & IP',name:'Microwave network (state / regional)',path:['mw'],cond:['fuel'],r:[3,3,2,2],u:'vd',bw:2,m:'Backhaul / IP',t:'Independent of fiber. Confirm who owns it and who staffs the network operations center.',note:'Independent transport that avoids fiber cuts.'},
- ...pick(['starlink'],'vd',{starlink:{r:[2,2,3,3],t:'Pre-install at the EOC with a battery-backed or generator feed. It restores IP, but cloud apps still need the internet.'}}),
- {id:'g_geo',g:'Satellite',name:'GEO satellite (VSAT / BGAN)',path:['geo'],cond:['sky'],r:[2,3,3,2],u:'vd',bw:3,m:'IP data / voice',t:'Independent of Starlink and terrestrial paths. Pre-position the dish and know who aligns it.',note:'Geostationary satellite service.'},
- ...pick(['satphone'],'v',{satphone:{r:[3,3,2,1]}}),
- ...pick(['inreach'],'vd'),
- ...pick(['shares','hf'],'vd'),
- ...pick(['rptr'],'v',{rptr:{name:'ARES/RACES VHF/UHF repeater network'}}),
- ...pick(['mesh'],'d'),
- ...pick(['runner'],'vd',{runner:{name:'Courier / runner'}}),
- {id:'g_ipaws',g:'Public alerting',name:'IPAWS-OPEN / WEA / EAS',path:['ipaws','net'],cond:['grid'],r:[2,3,3,3],u:'a',bw:1,m:'WEA / EAS message',t:'Pre-script message templates and keep a second authorized sender trained.',note:'Federal alert gateway to phones and broadcast.'},
- {id:'g_mass',g:'Public alerting',name:'Mass notification (opt-in / reverse call)',path:['mass','net'],cond:['grid'],r:[1,3,3,3],u:'a',bw:1,m:'Text / call / email blast',t:'Cloud-hosted. It shares the internet path with IPAWS, so do not rely on both.',note:'Hosted notification service.'},
- {id:'g_siren',g:'Public alerting',name:'Outdoor warning sirens',path:['sirens'],cond:['grid'],r:[2,2,3,3],u:'a',bw:2,m:'Siren activation',t:'Check battery backup and the activation path. Sirens only say "go get information."',note:'Local activation, independent of carriers.'},
- {id:'g_nwr',g:'Public alerting',name:'NOAA Weather Radio / broadcast radio',path:['bcast'],cond:['grid'],r:[2,3,3,3],u:'a',bw:3,m:'Broadcast message',t:'Pre-arranged with the local primary entry point station. Confirm its backup power.',note:'Broadcast radio reaches people without data.'},
- {id:'g_door',g:'Public alerting',name:'Door-to-door / loudspeaker vehicles',path:['human'],cond:[],r:[3,2,3,2],u:'a',bw:5,m:'Spoken warning',t:'Slow but needs no technology. Pre-assign routes and crews.',note:'People and vehicles with public-address systems.'}];
-
-const ASSETS_S=[
- ...pick(['firstnet','vz','tmo','b4ps'],'vd'),
- {id:'s_lmr',g:'Radio',name:'Statewide P25 radio system',path:['slmr'],cond:['fuel'],r:[3,3,3,3],u:'va',bw:1,m:'Voice / all-call to counties',t:'The backbone of statewide interoperability. Confirm site generator fuel contracts, backhaul diversity, and who is authorized to issue an all-call.',note:'Your statewide system. Also carries all-call to county dispatch.'},
- {id:'s_issi',g:'Radio',name:'County / regional systems via ISSI and console patches',path:['issi'],cond:['fuel'],r:[2,3,3,2],u:'v',bw:2,m:'Voice (patched talkgroups)',t:'Interconnects separate radio systems over network backhaul. Exercise the patches, because compatibility problems stay hidden until you try.',note:'Links county and neighboring systems. Rides network backhaul.'},
- {id:'s_conv',g:'Radio',name:'National interop channels (VCALL / UCALL / 8CALL), direct-mode',path:['simplex'],cond:['los'],r:[3,3,3,3],u:'v',bw:3,m:'Voice (interop channel)',t:'Works with no infrastructure and is compatible with almost any public safety radio. Range is short, so pre-assign relay points.',note:'Radio to radio. Needs no sites or backhaul.'},
- {id:'s_mcu',g:'Radio',name:'Mobile comms unit / COMU deployable cache',path:['prptr'],cond:['los'],r:[2,2,3,2],u:'v',bw:3,m:'Voice (deployable repeater / gateway)',t:'Can restore local interoperability anywhere a truck can reach. Pre-stage it and keep a trained COML on call.',note:'Deployable repeaters, gateways, and trained staff.'},
- {id:'s_wan',g:'Wireline & IP',name:'State network / WAN (WebEOC, email, VoIP)',path:['fiber','net'],cond:['fuel'],r:[2,3,3,3],u:'vd',bw:1,m:'VoIP / email / WebEOC',t:'Depends on facility power and upstream cloud services. Keep a documented offline procedure for each hosted tool.',note:'Your enterprise network and hosted services.'},
- {id:'s_nawas',g:'Wireline & IP',name:'NAWAS (National Warning System)',path:['nawas'],cond:['fuel'],r:[2,3,2,3],u:'va',bw:2,m:'Voice (warning party line)',t:'A dedicated FEMA warning circuit to state and local warning points, separate from public carrier networks. Join the routine roll calls so you know the terminal works and who is on the line.',note:'Dedicated warning-point voice network. Reaches warning points, not the public.'},
- {id:'s_femasat',g:'Wireline & IP',name:'FEMA satellite phone',path:['iridium'],cond:['sky'],r:[2,2,2,1],u:'v',bw:3,m:'Satellite voice',t:'You must step outside with a clear sky view. Treated here as Iridium, so it clashes with other Iridium assets. Keep it charged and confirm the number with FEMA.',note:'FEMA-issued satellite handset for federal coordination.'},
- {id:'s_mw',g:'Wireline & IP',name:'State microwave backbone',path:['mw'],cond:['fuel'],r:[3,3,2,2],u:'vd',bw:2,m:'Backhaul / IP',t:'Independent of fiber. Confirm network operations center staffing and tower generator fuel.',note:'Independent transport that avoids fiber cuts.'},
- ASSETS_A.find(a=>a.id==='g_isp'),
- ...pick(['starlink'],'vd',{starlink:{r:[2,2,3,3],t:'Pre-install at the state EOC with a battery-backed or generator feed. It restores IP, but cloud apps still need the internet.'}}),
- ASSETS_A.find(a=>a.id==='g_geo'),
- ...pick(['satphone'],'v',{satphone:{r:[3,3,2,1]}}),
- ...pick(['inreach'],'vda',{inreach:{t:'Multi-day battery and two-way text. Issue one to each county EOC so you can reach them with no terrestrial network.'}}),
- ...pick(['shares','hf'],'vd'),
- ...pick(['rptr'],'v',{rptr:{name:'ARES/RACES VHF/UHF repeater network'}}),
- ...pick(['mesh'],'d'),
- ...pick(['runner'],'vda',{runner:{name:'Liaison officer / courier'}}),
- ...ASSETS_A.filter(a=>['g_ipaws','g_mass','g_nwr'].includes(a.id)).map(a=>a.id==='g_nwr'?{...a,name:'Emergency Alert System / NOAA Weather Radio'}:a)];
-
-const ASSETS_R=[
- ...pick(['firstnet','vz','tmo','b4ps'],'vd'),
- {id:'r_lmr',g:'Radio',name:'Member-state radio systems',path:['slmr'],cond:['fuel'],r:[3,3,2,3],u:'va',bw:1,m:'Voice / all-call',t:'Each state runs its own system, so compatibility depends on shared talkgroups and encryption keys. Confirm the key-sharing agreement.',note:'The radio systems each member state owns.'},
- {id:'r_issi',g:'Radio',name:'Cross-state interconnects (ISSI / CSSI)',path:['issi'],cond:['fuel'],r:[2,3,3,2],u:'v',bw:2,m:'Voice (patched talkgroups)',t:'Links neighboring systems over network backhaul. Test across every state border, because a link that works in one direction can fail in the other.',note:'System-to-system links between states.'},
- {id:'r_conv',g:'Radio',name:'National interop channels (VCALL / UCALL / 8CALL), direct-mode',path:['simplex'],cond:['los'],r:[3,3,3,3],u:'v',bw:3,m:'Voice (interop channel)',t:'Compatible with almost any public safety radio and needs no infrastructure. Range is short, so pre-assign border relay points.',note:'Radio to radio. Needs no sites or backhaul.'},
- {id:'r_xb',g:'Radio',name:'Cross-border interop (Canada / Mexico agreements, shared channels)',path:['xb'],cond:['los'],r:[2,2,2,2],u:'v',bw:3,m:'Voice (shared channel)',t:'Compatibility depends on written agreements and shared channel plans. Exercise them with the partner each year.',note:'Channels and agreements with international partners.'},
- {id:'r_dep',g:'Radio',name:'Regional deployable comms (FEMA MERS, state COMU caches)',path:['dep'],cond:['sky'],r:[2,2,3,2],u:'vd',bw:3,m:'Voice / data (deployable)',t:'Moves capability into the impact area. Pre-agree who requests it and how fast it can arrive.',note:'Deployable gateways, repeaters, and satellite packages.'},
- {id:'r_wan',g:'Wireline & IP',name:'Multi-state network (WebEOC, email, VoIP)',path:['fiber','net'],cond:['fuel'],r:[2,3,3,3],u:'vd',bw:1,m:'VoIP / email / WebEOC',t:'Depends on facility power and upstream cloud services. Keep a documented offline procedure for each hosted tool.',note:'Interconnected state and regional networks.'},
- {id:'r_mw',g:'Wireline & IP',name:'Regional microwave interconnects',path:['mw'],cond:['fuel'],r:[3,3,2,2],u:'vd',bw:2,m:'Backhaul / IP',t:'Independent of fiber. Confirm who owns each link and who staffs the network operations center.',note:'Independent transport between states.'},
- ASSETS_A.find(a=>a.id==='g_isp'),
- ...pick(['starlink'],'vd',{starlink:{r:[2,2,3,3],t:'Pre-install at each coordination center. It restores IP, but cloud apps still need the internet.'}}),
- ASSETS_A.find(a=>a.id==='g_geo'),
- ...pick(['satphone'],'v',{satphone:{r:[3,3,2,1]}}),
- ...pick(['inreach'],'vda',{inreach:{t:'Multi-day battery and two-way text. Issue one to each member-state coordinator so you can reach them with no terrestrial network.'}}),
- {id:'r_ale',g:'Radio',name:'HF with ALE (SHARES / regional state-to-state net)',path:['hf'],cond:['lic','far'],r:[2,2,3,1],u:'vd',bw:4,m:'ALE voice / data',t:'Compatibility depends on ALE: every station needs the same ALE standard, channel plan, and address book. Verify it by calling the other states, not by reading the plan.',note:'Automatic link establishment lets states find each other without operators tuning.'},
- ...pick(['hf'],'vd',{hf:{name:'Amateur HF / Winlink without ALE'}}),
- ...pick(['rptr'],'v',{rptr:{name:'ARES/RACES VHF/UHF repeater network'}}),
- ...pick(['mesh'],'d'),
- ...pick(['runner'],'vda',{runner:{name:'Liaison officers / regional coordinators',t:'Needs no technology. Pre-assign liaisons to each member-state EOC and agree how they travel.'}}),
- ...ASSETS_A.filter(a=>['g_ipaws','g_nwr'].includes(a.id)).map(a=>a.id==='g_nwr'?{...a,name:'Emergency Alert System / NOAA Weather Radio'}:a)];
+const ASSETS_F=pick(['m_att','m_vz','m_tmo','teams','app','home','pots','hotline','mns','radio','frs','d2c','msat','inreach','mesh','rally']);
+const ASSETS_SITE=pick(['m_att','m_vz','m_tmo','teams','pots','hotline','mns','pa','radio','frs','starlink','inreach','satphone','mesh','rally','runner']);
+const ASSETS_CO=pick(['m_att','m_vz','m_tmo','teams','wan','oob','bridge','mns','hotline','pots','gets','status','social','media','cc','starlink','geo','satphone','inreach','shares','runner'],{pots:{name:'HQ landline (copper POTS)'}});
+const ASSETS_SEC=pick(['m_att','m_vz','m_tmo','teams','oob','bridge','gets','isac','hsin','mns','status','media','starlink','geo','satphone','inreach','shares','liaison','runner'],{oob:{name:'Out-of-band member platform (no company login)'},teams:{name:'Your organization\'s email & chat'},mns:{name:'Sector-wide mass notification'}});
+const ASSETS_XW=pick(['m_att','m_vz','m_tmo','teams','oob','bridge','gets','isac','hsin','webeoc','mns','status','media','starlink','geo','satphone','inreach','shares','liaison','runner'],{oob:{name:'Out-of-band partner platform (no company login)'},teams:{name:'Your organization\'s email & chat'},bridge:{name:'Standing cross-sector bridge (dial-in)'}});
 
 const mkS=(id,name,brief,kp,kc,hz,rule,why)=>({id,name,brief,kp:kp||[],kc:kc||[],hz,rule,why});
-const S_ATT=mkS('att','Carrier core outage','One carrier\'s core goes down nationwide, like AT&T in Feb 2024.',['att']);
-const S_GRID=mkS('grid','72 hours, no grid','Site batteries are dead. Any rung rated Power 1 is out.',[],['grid'],'winter',r=>r.r[0]<2,'Power rated 1');
-const S_STORM=mkS('storm','Atmospheric river, sheltering','You can\'t step outside. Any rung rated Ease 1 is out.',[],[],'flood',r=>r.r[3]<2,'Ease rated 1');
-const S_NIGHT=mkS('night','02:00, nobody on shift','It is the middle of the night. Business-hours and scheduled rungs are not monitored, and rungs rated Availability 1 fail.',[],['far'],null,r=>r.r[1]<2,'Availability rated 1');
-const S_MISM=mkS('mismatch','Far end has different gear','The receiving party\'s setup differs. Rungs rated Compatibility 1 fail.',[],[],null,r=>r.r[2]<2,'Compatibility rated 1');
+const S_ATT=mkS('att','Carrier core outage','One carrier\'s core goes down nationwide, like AT&T in February 2024.',['att']);
+const S_CYBER=mkS('cyber','Ransomware: company systems down','Email, chat, SSO and the corporate network are down or watched by the attacker. Anything that signs in with company credentials is out.',['idp','wan'],[],'cyber');
+const S_CLOUD=mkS('cloud','Major cloud / internet outage','A large cloud or internet provider fails for hours. Anything that rides the internet is out unless it has its own provider.',['net'],[],'cloud');
+const S_GRID=mkS('grid','72 hours, no grid','Batteries are dead. Any rung rated Power 1 is out.',[],['grid'],'winter',r=>r.r[0]<2,'Power rated 1');
+const S_SITE=mkS('site','Building closed','Fire, flood, or a police cordon: nobody can get into the site. Anything that needs building access is out.',[],['site'],'site');
+const S_SHELTER=mkS('shelter','Shelter in place','Severe weather or a hazmat release: you cannot step outside. Any rung rated Ease 1 is out.',[],[],'weather',r=>r.r[3]<2,'Ease rated 1');
+const S_NIGHT=mkS('night','Sunday 02:00, holiday weekend','Business-hours and scheduled rungs are not monitored, and rungs rated Availability 1 fail.',[],['far'],null,r=>r.r[1]<2,'Availability rated 1');
+const S_STAFF=mkS('staff','Key people unavailable','Pandemic or mass absenteeism: 40% of staff are out. Rungs rated Availability 1 fail.',[],['far'],null,r=>r.r[1]<2,'Availability rated 1');
+const S_MISM=mkS('mismatch','Far end uses different tools','The person or partner on the other end has a different setup. Rungs rated Compatibility 1 fail.',[],[],null,r=>r.r[2]<2,'Compatibility rated 1');
+const S_VENDOR=mkS('vendor','Notification vendor outage','Your mass-notification or call-center provider goes down at the worst time.',['mass','vendor']);
+const S_FUEL=mkS('fuel','Generator fuel runs out','Day 4 and beyond. Fuel deliveries stop and anything that needs generator fuel goes dark.',[],['fuel']);
 const S_SOLAR=mkS('solar','Geomagnetic storm','HF blackout across the dayside.',['hf']);
-const SCEN_P=[S_ATT,
- mkS('wildfire','Fire takes the ridge-top sites','All three carriers and the ham repeater lose their mountaintop sites.',['att','vz','tmo','rptr'],[],'wildfire'),
- S_GRID,mkS('cyber','Cloud & VoIP outage','A cyber event takes down hosted email, Teams, and VoIP.',['net'],[],'cyber'),
- S_STORM,S_NIGHT,S_MISM,S_SOLAR,
- mkS('cascadia','Total regional loss','Carriers, wireline, internet backbone, LMR backhaul, and site power all fail.',['att','vz','tmo','wire','net','lmr','rptr'],['grid'],'cascadia')];
-const SCEN_U=[S_ATT,
- mkS('wildfire','Fire takes the ridge-top sites','Carriers and the state radio system lose their mountaintop sites.',['att','vz','tmo','slmr'],[],'wildfire'),
- S_GRID,mkS('cyber','TAK server / cloud outage','Hosted data services are down. Anything riding the internet fails.',['net'],[],'cyber'),
- S_STORM,S_NIGHT,
- mkS('mismatch','Mutual-aid unit has different gear','The unit you must talk to has different radios. Rungs rated Compatibility 1 fail.',[],[],null,r=>r.r[2]<2,'Compatibility rated 1'),
- mkS('los','Deep canyon, no line of sight','Terrain blocks every line-of-sight radio path.',[],['los']),
- mkS('trunk','Trunked radio system down','Both your agency and the state radio systems are unavailable.',['lmr','slmr']),
- mkS('cascadia','Total regional loss','Carriers, internet, and both trunked radio systems are down, and the grid is out.',['att','vz','tmo','net','lmr','slmr'],['grid'],'cascadia')];
-const SCEN_A=[S_ATT,
- mkS('wildfire','Fire takes the ridge-top sites','Carriers, ham repeaters, and microwave hubs lose their mountaintop sites.',['att','vz','tmo','rptr','mw'],[],'wildfire'),
- S_GRID,
- mkS('fuel','Generator fuel resupply fails','Day 4 and beyond. Anything that needs generator fuel stops.',[],['fuel']),
- mkS('backhaul','Fiber and microwave cut','Backbone transport is severed in your region.',['fiber','mw']),
- mkS('cyber','Ransomware on agency network','Your WAN, hosted services, and internet-based alerting are all offline.',['fiber','isp','net'],[],'cyber'),
- S_STORM,S_NIGHT,S_MISM,S_SOLAR,
- mkS('cascadia','Total regional loss','Carriers, fiber, ISPs, microwave, radio systems, grid power, and fuel logistics all fail.',['att','vz','tmo','fiber','isp','mw','net','lmr','slmr','rptr'],['grid','fuel'],'cascadia')];
+const S_HURR=mkS('hurricane','Hurricane landfall','Regional cell sites, landlines and home internet fail, the grid is down, and sites are closed.',['att','vz','tmo','pstn','isp'],['grid','site'],'hurricane');
+const SCEN_F=[S_ATT,S_CYBER,S_CLOUD,S_GRID,S_SITE,S_SHELTER,S_NIGHT,S_MISM,S_HURR];
+const SCEN_SITE=[S_ATT,S_CYBER,S_CLOUD,S_GRID,
+ mkS('site','Evacuation: building closed','Everyone is outside at the assembly point. Anything that needs building access is out.',[],['site'],'site'),
+ S_NIGHT,S_MISM,S_VENDOR,
+ mkS('radio','Site radio system down','The radio repeater or base station fails.',['radio']),S_HURR];
+const SCEN_CO=[S_ATT,S_CYBER,S_CLOUD,S_GRID,
+ mkS('site','Headquarters closed','Fire, flood, or a police cordon: nobody can get into HQ. Anything that needs building access is out.',[],['site'],'site'),
+ S_FUEL,S_NIGHT,S_STAFF,S_VENDOR,S_MISM,S_HURR];
+const SCEN_SEC=[S_ATT,
+ mkS('cyber','Sector-wide cyber campaign','Member company systems are compromised. Email, chat, SSO and corporate networks are out or untrusted.',['idp','wan'],[],'cyber'),
+ S_CLOUD,S_GRID,S_FUEL,S_NIGHT,
+ mkS('mismatch','Member uses different tools','The member company you must reach has a different setup. Rungs rated Compatibility 1 fail.',[],[],null,r=>r.r[2]<2,'Compatibility rated 1'),
+ S_VENDOR,mkS('govnet','Government portal down','Government information-sharing portals are offline.',['govnet']),S_SOLAR,S_HURR];
+const SCEN_XW=[S_ATT,
+ mkS('cyber','Cross-sector cyber campaign','Corporate systems in several sectors are compromised. Email, chat, SSO and corporate networks are out or untrusted.',['idp','wan'],[],'cyber'),
+ S_CLOUD,S_GRID,S_FUEL,S_NIGHT,
+ mkS('mismatch','Partner sector uses different tools','The sector you must reach has a different setup. Rungs rated Compatibility 1 fail.',[],[],null,r=>r.r[2]<2,'Compatibility rated 1'),
+ S_VENDOR,mkS('govnet','Government portal down','Government portals and the shared operating picture are offline.',['govnet']),S_SOLAR,S_HURR,
+ mkS('cascade','Cascading lifeline failure','Power fails, then communications, then fuel: carriers, landlines, internet, grid power and fuel deliveries are all out across the region.',['att','vz','tmo','pstn','isp','net'],['grid','fuel'],'cascade')];
 
-const SCEN_S=[S_ATT,
- mkS('wildfire','Fire takes the ridge-top sites','Carriers, ham repeaters, and microwave hubs lose their mountaintop sites.',['att','vz','tmo','rptr','mw'],[],'wildfire'),
- S_GRID,
- mkS('fuel','Generator fuel resupply fails','Day 4 and beyond. Anything that needs generator fuel stops.',[],['fuel']),
- mkS('backhaul','Fiber and microwave cut','Backbone transport is severed. Radio system interconnects that ride it fail too.',['fiber','mw','issi']),
- mkS('cyber','Ransomware on the state network','The state WAN, hosted services, and internet-based alerting are all offline.',['fiber','isp','net'],[],'cyber'),
- S_STORM,S_NIGHT,
- mkS('mismatch','County uses a different radio system','The county you must reach has different radios. Rungs rated Compatibility 1 fail.',[],[],null,r=>r.r[2]<2,'Compatibility rated 1'),
- S_SOLAR,
- mkS('trunk','Statewide radio system down','The statewide system and its interconnects are unavailable.',['slmr','issi']),
- mkS('cascadia','Total regional loss','Carriers, fiber, ISPs, microwave, radio systems, grid power, and fuel logistics all fail.',['att','vz','tmo','fiber','isp','mw','net','slmr','issi','rptr'],['grid','fuel'],'cascadia')];
-
-const SCEN_R=[S_ATT,
- mkS('wildfire','Fire takes the ridge-top sites','Carriers, ham repeaters, and microwave hubs lose their mountaintop sites.',['att','vz','tmo','rptr','mw'],[],'wildfire'),
- S_GRID,
- mkS('fuel','Generator fuel resupply fails','Day 4 and beyond. Anything that needs generator fuel stops.',[],['fuel']),
- mkS('backhaul','Fiber and microwave cut','Backbone transport between states is severed. Radio interconnects that ride it fail too.',['fiber','mw','issi']),
- mkS('cyber','Ransomware on a regional network','Multi-state networks, hosted services, and internet-based alerting are all offline.',['fiber','isp','net'],[],'cyber'),
- S_STORM,S_NIGHT,
- mkS('mismatch','Neighbor state has different radios or ALE settings','The state you must reach is configured differently. Rungs rated Compatibility 1 fail.',[],[],null,r=>r.r[2]<2,'Compatibility rated 1'),
- S_SOLAR,
- mkS('trunk','Member-state radio systems down','The state systems and their interconnects are unavailable.',['slmr','issi']),
- mkS('border','Cross-border link lost','The channel or agreement with the international partner is unavailable.',['xb']),
- mkS('cascadia','Total regional loss','Carriers, fiber, ISPs, microwave, radio systems, grid power, and fuel logistics all fail across the region.',['att','vz','tmo','fiber','isp','mw','net','slmr','issi','rptr'],['grid','fuel'],'cascadia')];
+/* The 16 CISA critical infrastructure sectors. fn = a function suggested for a Sector plan. dep = sectors it commonly depends on (starting values for the crosswalk grid). */
+const SECTORS=[
+ {id:'chem',name:'Chemical',fn:'Facilities report releases and coordinate with responders',dep:['energy','water','trans']},
+ {id:'comm',name:'Commercial Facilities',fn:'Venues coordinate closures and evacuations',dep:['energy','coms','water']},
+ {id:'coms',name:'Communications',fn:'Carriers share outage and restoration status',dep:['energy','it']},
+ {id:'mfg',name:'Critical Manufacturing',fn:'Plants report supply-chain disruptions',dep:['energy','trans','coms']},
+ {id:'dams',name:'Dams',fn:'Operators warn downstream partners',dep:['energy','coms']},
+ {id:'dib',name:'Defense Industrial Base',fn:'Contractors report incidents to government customers',dep:['energy','coms','mfg','it']},
+ {id:'es',name:'Emergency Services',fn:'Agencies coordinate with private-sector partners',dep:['coms','energy','trans']},
+ {id:'energy',name:'Energy',fn:'Mutual-assistance crews and staging areas reach us',dep:['coms','trans','water','it']},
+ {id:'fin',name:'Financial Services',fn:'Members share payment and settlement system status',dep:['energy','coms','it']},
+ {id:'food',name:'Food and Agriculture',fn:'Distributors report supply and store status',dep:['energy','trans','water']},
+ {id:'gov',name:'Government Facilities',fn:'Facilities coordinate closures and continuity',dep:['energy','coms','it']},
+ {id:'hph',name:'Healthcare and Public Health',fn:'Hospitals coordinate patient transfers and bed status',dep:['energy','water','coms','trans']},
+ {id:'it',name:'Information Technology',fn:'Providers report platform outages and fixes',dep:['energy','coms']},
+ {id:'nuc',name:'Nuclear Reactors, Materials, and Waste',fn:'Plants report status to regulators and off-site response',dep:['energy','water','coms']},
+ {id:'trans',name:'Transportation Systems',fn:'Carriers report route, port and fuel status',dep:['energy','coms','it']},
+ {id:'water',name:'Water and Wastewater Systems',fn:'Utilities report treatment status and boil-water notices',dep:['energy','chem','coms']}];
+const SEC=Object.fromEntries(SECTORS.map(s=>[s.id,s]));
 
 const F=(id,name,type,x)=>({id,name,type,on:true,...x});
 const TIERS={
- personal:{label:'Personal',doc:'PERSONAL PACE PLAN',h1:'Be reachable when it counts.',
-  intro:'Pick the ways people can contact you. The plan builds the order they should try, on paths that don\'t share a failure point, and asks when you are listening on each one.',
-  whoL:'Name or call sign',whoP:'e.g. Jon Lee, OR SWIC',baseL:'Home base / area',baseP:'e.g. Salem, OR',
-  prefer:['firstnet'],w:[1,1,1,2],wNote:'Ease of use counts double when the auto-builder breaks ties, because you will be tired and stressed.',owner:false,fnx:false,
-  fnIntro:'List what you must be able to do, including receiving information. Each function gets its own ladder.',
-  kitIntro:'Select what you carry and can operate today.',
-  gd:{acc:'Standing up a backup won\'t interfere with ongoing operations or COOP.',suit:'Each rung lists a mode, and its capacity meets the function\'s needs.'},
-  assets:ASSETS_P,scen:SCEN_P,
-  fns:[F('cmd','My agency or duty officer reaches me','any'),F('fam','My household reaches me','any'),F('sa','I receive alerts & situational awareness','any')]},
- unit:{label:'Unit',doc:'UNIT PACE PLAN',h1:'Keep your unit reachable.',
-  intro:'For a strike team, COMU, or EOC section. This is how command, other units, and mutual aid reach you. Compatibility counts most: every member must be able to use every rung. Each rung gets an owner who monitors it.',
-  whoL:'Unit or team name',whoP:'e.g. Strike Team 1204, Marion County COMU',baseL:'Operating area / incident',baseP:'e.g. Cascade foothills, Division Z',
-  prefer:['u_lmr','firstnet'],w:[1,1,2,1],wNote:'Compatibility counts double when the auto-builder breaks ties, because everyone on the team has to use the same rung.',owner:true,fnx:false,
-  fnIntro:'List the communication functions the unit must keep alive. Voice, data, and mayday need different paths.',
-  kitIntro:'Select the communications resources the unit carries or can reach.',
-  gd:{acc:'Backup channels won\'t conflict with the incident radio plan (ICS 205) or other units.',suit:'Each rung lists a mode, and every team member is trained and equipped to use it.'},
-  assets:ASSETS_U,scen:SCEN_U,
-  fns:[F('cmd','Command reaches team leaders','voice'),F('tac','Team members reach each other','voice'),F('may','Anyone can call an emergency / mayday','voice'),F('log','Status & resource requests reach us','any'),F('sa','Position tracking & situational awareness','data')]},
- agency:{label:'Agency',doc:'AGENCY PACE PLAN',h1:'Keep your agency reachable.',
-  intro:'For an emergency management director or comms manager. This is how partners, responders, and the public\'s alerts reach and leave you. Each essential function gets its own ladder, a priority tier, a recovery time objective, and an owner. Availability and power count most for continuity.',
-  whoL:'Agency name',whoP:'e.g. Oregon Dept. of Emergency Management',baseL:'Jurisdiction',baseP:'e.g. State of Oregon',
-  prefer:['g_lmr','firstnet','g_wan'],w:[2,2,1,1],wNote:'Power and Availability count double when the auto-builder breaks ties, because continuity is the goal.',owner:true,fnx:true,
-  fnIntro:'Set each essential function\'s priority tier and recovery time objective (RTO). Public alerting and data systems need different paths than voice.',
-  kitIntro:'Select the systems and services the agency owns or has agreements to use.',
-  gd:{acc:'Backup paths won\'t interfere with ongoing operations and align with the COOP / COG plan.',suit:'Each rung lists a mode, and its capacity and staffing meet the function\'s needs.'},
-  assets:ASSETS_A,scen:SCEN_A,
-  fns:[F('dis','Responders and partners reach dispatch','voice',{pri:1,rto:'Immediate'}),F('eoc','Partners reach the EOC','voice',{pri:1,rto:'1 hour'}),F('cal','Duty-officer call-out reaches staff','any',{pri:1,rto:'1 hour'}),F('sit','Partners exchange information with us','data',{pri:2,rto:'4 hours'}),F('wrn','Public alerts & warnings','alert',{pri:1,rto:'30 minutes'}),F('int','Neighboring agencies reach us','voice',{pri:2,rto:'4 hours'})]},
- state:{label:'State',doc:'STATE PACE PLAN',h1:'Keep your state reachable.',
-  intro:'For a SWIC or ESF-2 lead. This is how counties, tribes, federal partners, and neighboring states reach you. Each essential function gets its own ladder, priority tier, RTO, owner, and a reach-out point outside the impact area. Availability and Compatibility count most, because the state must work across many systems it does not own.',
-  whoL:'State or program',whoP:'e.g. State of Oregon, ESF-2',baseL:'Jurisdiction / region',baseP:'e.g. Oregon, FEMA Region 10',
-  prefer:['s_lmr','firstnet','s_wan'],w:[1,2,2,1],wNote:'Availability and Compatibility count double in the auto-builder\'s tie-breaks, because the state must reach many systems it does not own.',owner:true,fnx:true,ro:true,
-  fnIntro:'Set each function\'s priority tier and recovery time objective (RTO), and name a reach-out point outside the impact area for when everything in-state fails.',
-  kitIntro:'Select the statewide systems and services you own, operate, or have agreements to use.',
-  gd:{acc:'Backup paths won\'t interfere with ongoing operations and are consistent with the state COOP and emergency operations plan.',suit:'Each rung lists a mode, and its capacity and staffing meet the function\'s needs.',extra:{k:'Governance review',d:'The plan is consistent with the SCIP and has been reviewed by the SIEC or equivalent governance body.',att:'gov'}},
-  assets:ASSETS_S,scen:SCEN_S,
-  fns:[F('eoc','Counties and tribes reach the State EOC','voice',{pri:1,rto:'1 hour',ro:''}),F('iop','Responders reach us on statewide interoperable voice (ESF-2)','voice',{pri:1,rto:'Immediate',ro:''}),F('wrn','Public alerts & warnings','alert',{pri:1,rto:'30 minutes',ro:''}),F('sit','Lifeline status reaches us','data',{pri:2,rto:'4 hours',ro:''}),F('fed','Federal partners and neighboring states reach us','voice',{pri:2,rto:'4 hours',ro:''}),F('ldr','Leadership and agencies reach us','any',{pri:1,rto:'1 hour',ro:''})]},
- region:{label:'Region',doc:'REGION PACE PLAN',h1:'Keep your region reachable.',
-  intro:'For a multi-state group or RECCWG. This is how member states, cross-border partners, and federal liaisons reach each other. Compatibility counts most: states have to reach systems they do not own, across borders, using shared channels, keys, and ALE settings. Each function has a priority, RTO, owner, and a reach-out point outside the impact area.',
-  whoL:'Region or working group',whoP:'e.g. FEMA Region 10 RECCWG',baseL:'States / area covered',baseP:'e.g. AK, ID, OR, WA',
-  prefer:['r_lmr','r_issi','r_wan','firstnet'],w:[1,1,3,1],wNote:'Compatibility counts triple in the auto-builder\'s tie-breaks, because a link that one state cannot use is not a link.',owner:true,fnx:true,ro:true,
-  fnIntro:'Set each function\'s priority tier and recovery time objective (RTO), and name a reach-out point outside the impact area, such as a state or federal center that is unaffected.',
-  kitIntro:'Select the interconnects and shared resources the member states can actually rely on.',
-  gd:{acc:'Backup paths won\'t interfere with member states\' own continuity plans or ongoing operations.',suit:'Each rung lists a mode, and its capacity and staffing meet the function\'s needs.',extra:[{k:'Member concurrence',d:'Member states or working group members have reviewed the plan and agreed to the shared channels, talkgroups, keys, and ALE settings.',att:'gov'},{k:'Compatibility tested',d:'Cross-border talkgroups, ALE settings, and channel plans have been tested end to end between member states.',att:'compat'}]},
-  assets:ASSETS_R,scen:SCEN_R,
-  fns:[F('iop','Member states reach each other on voice','voice',{pri:1,rto:'Immediate',ro:''}),F('xbd','Cross-border partners reach us','voice',{pri:1,rto:'1 hour',ro:''}),F('sit','Situational awareness & resource sharing','data',{pri:2,rto:'4 hours',ro:''}),F('wrn','Multi-state alert coordination','alert',{pri:1,rto:'30 minutes',ro:''}),F('fed','Federal liaison reaches us (FEMA, CISA, DoD)','voice',{pri:2,rto:'4 hours',ro:''}),F('ldr','Leadership and member states reach us','any',{pri:1,rto:'1 hour',ro:''})]}
+ frontline:{label:'Frontline',sub:'Employee',doc:'FRONTLINE PACE PLAN',h1:'Stay reachable when work gets hard.',
+  intro:'For an employee, shift lead or field technician. This is how your manager and the company reach you, how you check in safe, and how you ask for what you need to keep working, when the usual phone, app or email stops working.',
+  whoL:'Your name and role',whoP:'e.g. Jordan Rivera, Store 114 shift lead',baseL:'Where you work',baseP:'e.g. Store 114, Mobile, AL',
+  prefer:[],w:[1,1,1,2],wNote:'Ease of use counts double when the auto-builder breaks ties, because you will be tired and stressed.',owner:false,fnx:false,
+  fnIntro:'List why the company and the people around you need to reach you, and why you need to reach them. Each one gets its own ladder.',
+  kitIntro:'Select what you carry and can use today, company-issued or your own.',
+  gd:{acc:'Your manager knows this plan, and using the backups will not break company policy.',suit:'Each rung lists a mode that works for the message: a check-in, an alert, or a request for help.'},
+  assets:ASSETS_F,scen:SCEN_F,
+  fns:[F('sup','My manager or the company reaches me','any'),F('chk','I check in safe and report my status','any'),F('res','I ask for resources or escalate a problem','any'),F('alr','I receive company alerts and instructions','any'),F('fam','My household reaches me','any')]},
+ site:{label:'Site',sub:'Store · plant · crew',doc:'SITE PACE PLAN',h1:'Keep your site connected.',
+  intro:'For a store, plant, branch, warehouse, clinic or field crew. This is how the company\'s incident team reaches site leaders, how leaders reach the shift, how workers check in, and how the site gets what it needs to keep running. Compatibility counts most: everyone on site must be able to use every rung, and each rung needs someone who answers it.',
+  whoL:'Site or crew',whoP:'e.g. Distribution Center 7, Line crew 12',baseL:'Address or operating area',baseP:'e.g. Memphis, TN',
+  actL:'Site incident lead',actP:'e.g. General manager, then shift supervisor',
+  prefer:['radio','pots'],w:[1,1,2,1],wNote:'Compatibility counts double when the auto-builder breaks ties, because everyone on site has to use the same rung.',owner:true,fnx:false,
+  fnIntro:'List the communication functions the site must keep alive. Life-safety, accountability and resource requests need different paths.',
+  kitIntro:'Select the communications the site has or can reach.',
+  gd:{acc:'Backup channels fit the site emergency action plan and will not interfere with life-safety systems or responders.',suit:'Each rung lists a mode, and every person on shift is trained and equipped to use it.'},
+  assets:ASSETS_SITE,scen:SCEN_SITE,
+  fns:[F('cmd','The incident team reaches site leaders','voice'),F('shf','Site leaders reach the shift','any'),F('acc','Workers check in (accountability)','any'),F('saf','Anyone can raise a life-safety emergency','voice'),F('res','The site requests resources and support','any'),F('ven','Key suppliers and contractors reach the site','any')]},
+ company:{label:'Company',sub:'CEO · crisis team',doc:'COMPANY CONTINUITY PACE PLAN',h1:'Keep the company able to shift.',
+  intro:'For the CEO, the crisis management team and the business continuity lead. This is how leaders convene, how employees, customers, suppliers and regulators reach you, and how you keep coordinating when a storm, a cyber incident or a vendor failure takes out the usual tools. Each essential function gets a priority, a recovery time objective (RTO) and an owner. Availability and power count most, because continuity is the goal.',
+  whoL:'Company',whoP:'e.g. Example Logistics, Inc.',baseL:'Headquarters / footprint',baseP:'e.g. Atlanta HQ, 42 sites in 9 states',
+  actL:'Who can activate the plan',actP:'e.g. CEO, COO, or any two crisis team members',
+  prefer:['bridge','oob','mns'],w:[2,2,1,1],wNote:'Power and Availability count double when the auto-builder breaks ties, because continuity is the goal.',owner:true,fnx:true,
+  fnIntro:'Set each essential function\'s priority and recovery time objective (RTO). Take them from your business impact analysis where you have one.',
+  kitIntro:'Select the systems, services and agreements the company has today.',
+  gd:{acc:'Backup paths will not interfere with operations and line up with the business continuity, incident response and crisis communications plans.',suit:'Each rung lists a mode, and its capacity and staffing meet the function\'s needs.',extra:{k:'Executive sign-off',d:'The CEO or crisis team lead has reviewed the plan, the activation authority, and the RTOs.',att:'exec'}},
+  assets:ASSETS_CO,scen:SCEN_CO,
+  fns:[F('cmt','Crisis team convenes and reaches the CEO','voice',{pri:1,rto:'1 hour'}),F('emp','Employees get alerts and report they are safe','alert',{pri:1,rto:'30 minutes'}),F('ir','Incident response team coordinates out-of-band','any',{pri:1,rto:'1 hour'}),F('ops','Sites and field operations reach headquarters','voice',{pri:1,rto:'1 hour'}),F('cus','Customers reach us and get updates','any',{pri:1,rto:'4 hours'}),F('sup','Critical suppliers and vendors reach us','any',{pri:2,rto:'4 hours'}),F('reg','Board, regulators, insurer and law enforcement reach us','voice',{pri:2,rto:'4 hours'})]},
+ sector:{label:'Sector',sub:'ISAC · council',doc:'SECTOR PACE PLAN',h1:'Keep your sector coordinated.',
+  intro:'For an ISAC, a sector coordinating council, a mutual-assistance group or an industry association. This is how member companies, government partners and neighboring sectors reach you when member systems are down. Each function gets a priority, an RTO, an owner, and a reach-out point outside the impact area. Availability and Compatibility count most, because you must reach members whose systems you do not control.',
+  whoL:'Sector organization',whoP:'e.g. Gulf Coast Utilities Mutual Assistance Group',baseL:'Coverage area',baseP:'e.g. AL, FL, LA, MS, TX',
+  actL:'Who can activate the sector call',actP:'e.g. ISAC watch officer or council chair',
+  prefer:['bridge','isac'],w:[1,2,2,1],wNote:'Availability and Compatibility count double in the auto-builder\'s tie-breaks, because a sector must reach many companies whose systems it does not own.',owner:true,fnx:true,ro:true,sectorPick:true,
+  fnIntro:'Set each function\'s priority and recovery time objective (RTO), and name a reach-out point outside the impact area for when everything local fails.',
+  kitIntro:'Select the channels the sector runs, shares or has agreements to use.',
+  gd:{acc:'Backup paths will not interfere with members\' own continuity plans, and fit the sector\'s information-sharing rules (such as TLP).',suit:'Each rung lists a mode, and its capacity and staffing meet the function\'s needs.',extra:{k:'Sector council review',d:'The sector coordinating council, ISAC board or equivalent has reviewed the plan.',att:'gov'}},
+  assets:ASSETS_SEC,scen:SCEN_SEC,
+  fns:[F('ops','Member companies reach the sector operations center','voice',{pri:1,rto:'1 hour',ro:''}),F('thr','Threat and incident information is shared with members','data',{pri:1,rto:'1 hour',ro:''}),F('gov','Government partners reach us (CISA, sector risk agency, state EOC)','voice',{pri:1,rto:'1 hour',ro:''}),F('mut','Members request and offer mutual assistance','any',{pri:1,rto:'4 hours',ro:''}),F('sts','Member operating status reaches us','data',{pri:2,rto:'4 hours',ro:''}),F('pub','Coordinated public messaging','alert',{pri:2,rto:'4 hours',ro:''})]},
+ crosswalk:{label:'Crosswalk',sub:'Cross-sector',doc:'CROSS-SECTOR CROSSWALK PLAN',h1:'Keep sectors connected to each other.',
+  intro:'For a business emergency operations center (BEOC), a regional public-private partnership, or a group of lifeline sectors. Sectors depend on each other: water needs power, power needs communications and fuel, and everyone needs transportation. This plan maps those dependencies and sets out how sectors and government reach each other when one of them fails. Compatibility counts most, because a link that one sector cannot use is not a link.',
+  whoL:'Partnership or coordination cell',whoP:'e.g. Gulf Coast Business EOC',baseL:'Region covered',baseP:'e.g. FEMA Region 4 coastal counties',
+  actL:'Who can activate the crosswalk',actP:'e.g. BEOC director or state EOC private-sector liaison',
+  prefer:['bridge','webeoc'],w:[1,1,3,1],wNote:'Compatibility counts triple in the auto-builder\'s tie-breaks, because a link that one sector cannot use is not a link.',owner:true,fnx:true,ro:true,xw:true,
+  fnIntro:'Set each function\'s priority and recovery time objective (RTO), and name a reach-out point outside the impact area, such as an unaffected partner or a national operations center.',
+  kitIntro:'Select the shared channels and agreements the participating sectors can really rely on.',
+  gd:{acc:'Backup paths will not interfere with any sector\'s own continuity plan or with government emergency operations.',suit:'Each rung lists a mode, and its capacity and staffing meet the function\'s needs.',extra:{k:'Partner concurrence',d:'Each participating sector has reviewed the plan and agreed to the shared channels, bridges and liaisons.',att:'gov'}},
+  assets:ASSETS_XW,scen:SCEN_XW,
+  fns:[F('beoc','Sectors reach the business EOC / coordination cell','voice',{pri:1,rto:'1 hour',ro:''}),F('dep','A sector we depend on reaches us, and we reach it','voice',{pri:1,rto:'1 hour',ro:''}),F('lif','Lifeline status is exchanged (power, communications, fuel, water, transport)','data',{pri:1,rto:'4 hours',ro:''}),F('res','Cross-sector resource requests (fuel, generators, crews, access)','any',{pri:1,rto:'4 hours',ro:''}),F('gov','Government EOC and ESF leads reach the private sector','voice',{pri:1,rto:'1 hour',ro:''}),F('pub','Joint public information','alert',{pri:2,rto:'4 hours',ro:''})]}
 };
 
+/* Where the plan supports common continuity and incident standards. gates = the readiness gates that evidence it. Topic-level references only: not a compliance determination. */
+const STDS=[
+ {s:'CISA / NCSWIC PACE criteria',c:'Feasible, Acceptable, Suitable, Distinguishable, Complete',g:['Feasible','Acceptable','Suitable','Distinguishable','Complete']},
+ {s:'ISO 22301:2019 §8.4.3',c:'Warning and communication: communicate with interested parties and keep communications available during a disruption',g:['Complete','Monitored','Survives every drill']},
+ {s:'ISO 22301:2019 §8.5',c:'Exercise programme: test that continuity arrangements work',g:['Survives every drill','Monitored']},
+ {s:'NFPA 1600 / 1660',c:'Crisis communications, public information and warning',g:['Complete','Monitored']},
+ {s:'NIST CSF 2.0 RS.CO-02, RS.CO-03',c:'Notify stakeholders of incidents and share information during response',g:['Survives every drill','Complete']},
+ {s:'NIST CSF 2.0 RC.CO-03, RC.CO-04',c:'Communicate recovery progress internally and publicly through approved methods',g:['Survives every drill','Complete']},
+ {s:'FFIEC BCM booklet (2019)',c:'Communications plans include alternate methods when primary systems fail',g:['Distinguishable','Survives every drill'],tiers:['company','sector']},
+ {s:'SEC Form 8-K Item 1.05',c:'Disclose a material cybersecurity incident within four business days of determining materiality; the reporting path must work during the incident',g:['Survives every drill','Executive sign-off'],tiers:['company']},
+ {s:'NIPP 2013',c:'Information sharing within and across critical infrastructure sectors',g:['Complete','Survives every drill'],tiers:['sector','crosswalk']},
+ {s:'FEMA Community Lifelines',c:'Stabilize lifelines by coordinating across sectors and with government',g:['Crosswalk complete','Survives every drill'],tiers:['crosswalk']}];
+
 /* ================= state ================= */
-let TIER='personal';try{TIER=localStorage.getItem('pace-snap-tier')||'personal'}catch(e){}if(!TIERS[TIER])TIER='personal';
+let TIER='frontline';try{TIER=localStorage.getItem('pace-biz-tier')||'frontline'}catch(e){}if(!TIERS[TIER])TIER='frontline';
 const T=()=>TIERS[TIER];
 let S,SCEN,ASSETS;
-const fresh=()=>({sample:false,who:'',by:'',base:'',
+const fresh=()=>({sample:false,who:'',by:'',base:'',act:'',sector:'',xw:{sec:{},dep:{}},
  fns:JSON.parse(JSON.stringify(T().fns)),inv:{},custom:[],alts:[],manual:{},rate:{},contact:{},owner:{},mode:{},mon:{},tested:{},cad:{},trig:{},attest:{acc:false,suit:false},tab:T().fns[0].id});
-function loadState(){SCEN=T().scen;ASSETS=T().assets;let raw=null;try{raw=localStorage.getItem('pace-snap-v5-'+TIER)}catch(e){}
+function loadState(){SCEN=T().scen;ASSETS=T().assets;let raw=null;try{raw=localStorage.getItem('pace-biz-v1-'+TIER)}catch(e){}
  try{S=Object.assign(fresh(),raw?JSON.parse(raw):{})}catch(e){S=fresh()}}
-const save=()=>{try{localStorage.setItem('pace-snap-v5-'+TIER,JSON.stringify(S));localStorage.setItem('pace-snap-tier',TIER)}catch(e){}};
+const save=()=>{try{localStorage.setItem('pace-biz-v1-'+TIER,JSON.stringify(S));localStorage.setItem('pace-biz-tier',TIER)}catch(e){}};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const allAssets=()=>ASSETS.concat(S.custom);
@@ -504,7 +479,8 @@ const curTab=()=>{const a=activeFns();if(!a.find(f=>f.id===S.tab))S.tab=a[0]?.id
 function drillRungs(L,sc,assume){const fails=[];
  for(let i=0;i<L.length;i++){const R=L[i],A=R.a?asset(R.a):null;if(!A){fails.push({i,why:'empty rung'});continue}
   const kp=A.path.filter(p=>sc.kp.includes(p)),kc=(A.cond||[]).filter(c=>sc.kc.includes(c));
-  let why=kp.length?PATHS[kp[0]]+' down':kc.length?'needs '+CONDS[kc[0]]:(sc.rule&&sc.rule(R))?sc.why:'';
+  const noVia=A.via&&A.via.every(p=>sc.kp.includes(p));
+  let why=kp.length?PATHS[kp[0]]+' down':noVia?'no phone network left to deliver it':kc.length?'needs '+CONDS[kc[0]]:(sc.rule&&sc.rule(R))?sc.why:'';
   if(!why&&!isMon(R,sc,assume||fails.some(x=>x.why!=='empty rung')))why='not monitored: '+monWhy(R);
   if(!why)return{ok:true,lvl:i,fails};fails.push({i,why})}
  return{ok:false,fails}}
@@ -540,7 +516,7 @@ const trigOf=(f,i)=>cget('trig',f,i)??DEFTRIG[i];
 function view(f){const ids=ladderIds(f);return{ids,L:rungsOf(ids,f),cl:clashes(ids),rows:LEVELS.map((l,i)=>{const id=ids[i],A=id?asset(id):null;
  return{i,l,id,A,mode:A?modeOf(f,id):'',contact:A?contactOf(f,id):'',owner:A?ownerOf(f,id):'',mon:A?monEff(f,id):null,tested:A?((S.tested[f]||{})[id]||''):'',r:A?effR(A):[2,2,2,2],cad:A?cadOf(f,id,i):'monthly',trig:i<3?trigOf(f,i):''}})}}
 const drillF=(f,s)=>drillRungs(view(f).L,s);
-const fnSub=f=>T().fnx?`Tier ${f.pri} | RTO ${f.rto||'not set'}`:TYPES[f.type||'any'];
+const fnSub=f=>T().fnx?`Priority ${f.pri} | RTO ${f.rto||'not set'}`:TYPES[f.type||'any'];
 
 function rationale(ids,i,f){const R=rungsOf(ids,f),A=asset(ids[i]),out=[];
  out.push(['Primary: your everyday path, the highest-throughput, easiest option for this function.','Alternate: the first fallback, on a different network than Primary.','Contingency: a strategic fallback that survives what takes out the rungs above it.','Emergency: the most self-reliant path left for this function.'][i]);
@@ -550,6 +526,7 @@ function rationale(ids,i,f){const R=rungsOf(ids,f),A=asset(ids[i]),out=[];
  else out.push(carried.length?`Carries the load in: ${carried.join(', ')}.`:'Backstop: adds depth if a rung above is degraded rather than down.');
  const others=ids.filter((x,j)=>x&&j!==i).flatMap(x=>asset(x).path);
  out.push(`Rides ${A.path.map(p=>PATHS[p]).join(' + ')}${A.path.some(p=>others.includes(p))?'. This path is shared with another rung, so a failure there hits both.':', a path no other rung uses.'}`);
+ if(A.via)out.push('Delivered over any working phone network, so it fails only when all of them are down at once.');
  if(f)out.push('Monitoring: '+monShort(monEff(f,ids[i]))+'.');
  const weak=RATE.filter((_,k)=>effR(A)[k]<2).map(r=>r[0]);
  if(weak.length)out.push(`Watch: rated 1 on ${weak.join(' and ')}. Train or upgrade to raise it.`);
@@ -576,6 +553,7 @@ function gates(){const Fs=activeFns(),V=Fs.map(f=>view(f.id));const has=Fs.lengt
  {k:'Complete',ok:full&&cm.length===0,d:'Every rung has a contact or ID'+(T().owner?', an owner':'')+(T().fnx?', and every function an RTO':'')+(T().ro?' and a reach-out point':'')+'.',miss:cm.join(', ')},
  {k:'Monitored',ok:full&&monBad===0,d:'Every rung says when someone is listening. Triggered rungs name the events and a start-up time. Scheduled rungs give the schedule.',miss:!full?'Fill every rung':`${monBad} rung${monBad===1?'':'s'} need confirming, a trigger, a schedule, or a start-up time`},
  {k:'Survives every drill',ok:full&&lost===0,d:'Every ladder holds through every outage drill, whatever the hazard.',miss:lost?`${lost} function${lost===1?'':'s'} lost in a drill`:'Fill every rung'}];
+ if(T().xw){const x=xwFindings();out.push({k:'Crosswalk complete',ok:x.P.length>=2&&!x.noLiaison.length,d:'At least two sectors take part, and each one has a liaison organization and a 24/7 contact.',miss:x.P.length<2?'Add at least two sectors to the crosswalk':`${x.noLiaison.length} sector${x.noLiaison.length===1?'':'s'} missing a liaison or contact`})}
  [].concat(T().gd.extra||[]).forEach(ex=>out.push({k:ex.k,ok:!!S.attest[ex.att],d:ex.d,att:ex.att,miss:'Confirm below'}));
  return out}
 function summary(){const Fs=activeFns();const inv=invList().length;
@@ -583,15 +561,28 @@ function summary(){const Fs=activeFns();const inv=invList().length;
  const held=pips.filter(Boolean).length;const full=Fs.length>0&&Fs.every(f=>{const v=view(f.id);return filled(v.ids)===4&&!v.cl.length});
  return{pips,held,ironclad:inv>0&&held===SCEN.length&&full,none:inv<2}}
 
+/* ================= crosswalk ================= */
+const SAB={chem:'Chem',comm:'Comm fac',coms:'Comms',mfg:'Mfg',dams:'Dams',dib:'DIB',es:'Emerg svc',energy:'Energy',fin:'Finance',food:'Food/Ag',gov:'Gov fac',hph:'Health',it:'IT',nuc:'Nuclear',trans:'Transport',water:'Water'};
+const DEPLAB=['','Uses','Critical'];
+const xwSec=id=>{S.xw=S.xw||{sec:{},dep:{}};return S.xw.sec[id]=S.xw.sec[id]||{}};
+const xwOn=()=>SECTORS.filter(s=>((S.xw||{}).sec||{})[s.id]?.on);
+/* Dependency of sector a on sector b: 0 none, 1 uses, 2 critical. Starts from SECTORS[].dep until the planner changes it. */
+const depOf=(a,b)=>{const v=((S.xw||{}).dep||{})[a+'>'+b];return v!==undefined?v:(SEC[a].dep.includes(b)?2:0)};
+function xwFindings(){const P=xwOn(),ids=new Set(P.map(s=>s.id));
+ const hubs=P.map(p=>({s:p,by:P.filter(q=>q.id!==p.id&&depOf(q.id,p.id)===2)})).filter(x=>x.by.length).sort((a,b)=>b.by.length-a.by.length);
+ const miss=new Map();P.forEach(p=>p.dep.forEach(d=>{if(ids.has(d))return;if(!miss.has(d))miss.set(d,[]);miss.get(d).push(p)}));
+ const noLiaison=P.filter(p=>{const x=S.xw.sec[p.id]||{};return !(x.org||'').trim()||!(x.contact||'').trim()});
+ return{P,hubs,miss:[...miss.entries()].map(([d,by])=>({s:SEC[d],by})),noLiaison}}
+
 /* ================= render ================= */
-const pathChips=a=>a.path.map(p=>`<span class="chip path">${PATHS[p]}</span>`).join('')+(a.cond||[]).map(c=>`<span class="chip">${CONDS[c]}</span>`).join('')+(a.u&&a.u.length<3?`<span class="chip">${a.u.split('').map(c=>({v:'voice',d:'data',a:'alerts'}[c])).join(' + ')}</span>`:'');
+const pathChips=a=>a.path.map(p=>`<span class="chip path">${PATHS[p]}</span>`).join('')+(a.cond||[]).map(c=>`<span class="chip">${CONDS[c]}</span>`).join('')+(a.via?`<span class="chip">via any phone network</span>`:'')+(a.u&&a.u.length<3?`<span class="chip">${a.u.split('').map(c=>({v:'voice',d:'data',a:'alerts'}[c])).join(' + ')}</span>`:'');
 function renderStatus(){const s=summary(),G=gates();const n=SCEN.length-s.held;
  $('status').innerHTML=`<span class="vtag ${s.none?'none':s.ironclad?'ok':'gap'}">${s.none?'Pick your kit':s.ironclad?'Ironclad':n+' gap'+(n===1?'':'s')}</span>
  <span class="pips" title="${s.held} of ${SCEN.length} drills held">${s.pips.map((p,i)=>`<span class="pip ${p?'ok':''}" title="${esc(SCEN[i].name)}"></span>`).join('')}</span>
  <span class="vmeta">${G.filter(g=>g.ok).length}/${G.length} gates</span>`}
 function renderHead(){const t=T();$('tierName').textContent='· '+t.label;
  $('head').innerHTML=`<section class="card"><span class="eyebrow">${t.label} PACE plan</span>
- <div class="tiers" role="tablist" aria-label="Plan tier">${Object.entries(TIERS).map(([k,v])=>`<button type="button" role="tab" data-act="tier" data-id="${k}" aria-selected="${k===TIER}">${v.label}</button>`).join('')}</div>
+ <div class="tiers" role="tablist" aria-label="Plan tier">${Object.entries(TIERS).map(([k,v])=>`<button type="button" role="tab" data-act="tier" data-id="${k}" aria-selected="${k===TIER}">${v.label}<small>${v.sub}</small></button>`).join('')}</div>
  <h1>${t.h1}</h1><p class="muted">${t.intro}</p>
  <div class="row" style="gap:8px"><button type="button" class="btn sm" data-act="help">Guided setup</button><button type="button" class="btn sm" data-act="saveFile">Save progress</button><button type="button" class="btn sm" data-act="loadFile">Load progress</button><button type="button" class="btn sm" data-act="allPdf">Download all plans (PDF)</button><button type="button" class="btn sm" data-act="sample">${SAMPLEARM?'Replace my plan? Click again':'Load sample plan'}</button></div>
  ${S.sample?`<div class="flag warn"><b>This is a sample plan</b> with made-up contacts, so you can see what a finished plan looks like. <div class="row" style="gap:8px;margin-top:6px"><button type="button" class="btn sm pri" data-act="clearSample">Clear sample and start my own</button></div></div>`:''}
@@ -599,6 +590,8 @@ function renderHead(){const t=T();$('tierName').textContent='· '+t.label;
   <label class="fld">${t.whoL}<input type="text" id="who" data-bind="who" placeholder="${esc(t.whoP)}" value="${esc(S.who)}"></label>
   <label class="fld">${t.baseL}<input type="text" id="base" data-bind="base" placeholder="${esc(t.baseP)}" value="${esc(S.base)}"></label>
   ${t.owner?`<label class="fld">Prepared by<input type="text" id="by" data-bind="by" placeholder="Name and role" value="${esc(S.by)}"></label>`:''}
+  ${t.actL?`<label class="fld">${t.actL}<input type="text" id="act" data-bind="act" placeholder="${esc(t.actP)}" value="${esc(S.act)}"></label>`:''}
+  ${t.sectorPick?`<label class="fld">Sector<select id="sector" data-chg="sector"><option value="">Choose a sector</option>${SECTORS.map(x=>`<option value="${x.id}" ${S.sector===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>`:''}
  </div></section>`}
 function renderFns(){const t=T();
  $('fns').innerHTML=`<section class="card"><h2><span class="n">1</span>What people need to reach you for</h2><p class="muted">Each reason gets its own contact ladder: the ordered ways people can reach you for that purpose. ${t.fnIntro}</p>
@@ -606,13 +599,24 @@ function renderFns(){const t=T();
   <input type="checkbox" id="fn-${i}" data-act="fnToggle" data-idx="${i}" ${f.on?'checked':''} aria-label="Include ${esc(f.name)}">
   <input type="text" id="fname-${i}" data-bind="fns.${i}.name" data-rer="1" value="${esc(f.name)}" aria-label="Function name">
   <select id="ftype-${i}" data-chg="fntype" data-idx="${i}" aria-label="Function type">${Object.entries(TYPES_S).map(([k,v])=>`<option value="${k}" ${(f.type||'any')===k?'selected':''}>${v}</option>`).join('')}</select>
-  ${t.fnx?`<select id="fpri-${i}" data-chg="fnpri" data-idx="${i}" aria-label="Priority tier (1 is highest)">${[1,2,3].map(n=>`<option value="${n}" ${+f.pri===n?'selected':''}>Tier ${n}</option>`).join('')}</select>
+  ${t.fnx?`<select id="fpri-${i}" data-chg="fnpri" data-idx="${i}" aria-label="Priority (1 is highest)">${[1,2,3].map(n=>`<option value="${n}" ${+f.pri===n?'selected':''}>Priority ${n}</option>`).join('')}</select>
   <input type="text" id="frto-${i}" data-bind="fns.${i}.rto" data-rer="1" value="${esc(f.rto||'')}" placeholder="RTO, e.g. 1 hour" aria-label="Recovery time objective">`:''}
   ${f.custom?`<button type="button" class="btn sm" data-act="fnDel" data-idx="${i}" aria-label="Remove ${esc(f.name)}">Remove</button>`:'<span></span>'}</div>`).join('')}</div>
+${t.sectorPick&&S.sector&&!S.fns.some(f=>f.name===SEC[S.sector].fn)?`<div class="tip"><b>Suggested for ${esc(SEC[S.sector].name)}.</b> <button type="button" class="ev" data-act="secFn">+ ${esc(SEC[S.sector].fn)}</button></div>`:''}
  <div class="fnadd"><input type="text" id="newfn" placeholder="Add a function" aria-label="New function name"><select id="newtype" aria-label="New function type">${Object.entries(TYPES_S).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button type="button" class="btn sm" data-act="addFn">Add</button></div>
  </section>`}
+function renderXW(){if(!T().xw){$('xw').innerHTML='';return}const x=xwFindings(),P=x.P;
+ $('xw').innerHTML=`<section class="card"><h2><span class="n">1b</span>Sector crosswalk</h2>
+ <p class="muted">Pick the sectors taking part, name each one's liaison, and mark who depends on whom. Starting values come from common interdependencies between the 16 CISA critical infrastructure sectors. Change any that don't fit your region.</p>
+ <div class="evs" role="group" aria-label="Participating sectors">${SECTORS.map(s=>`<button type="button" class="ev" data-act="xwSec" data-id="${s.id}" aria-pressed="${P.includes(s)}">${esc(s.name)}</button>`).join('')}</div>
+ ${P.length?`<div>${P.map(p=>{const v=S.xw.sec[p.id];return `<div class="altrow"><b>${esc(p.name)}</b><label class="fld">Liaison organization<input type="text" id="xo-${p.id}" data-bind="xw.sec.${p.id}.org" value="${esc(v.org||'')}" placeholder="e.g. ${p.id==='energy'?'Regional utility mutual-assistance group':'Sector ISAC or lead company'}"></label><label class="fld">24/7 contact<input type="text" id="xc-${p.id}" data-bind="xw.sec.${p.id}.contact" value="${esc(v.contact||'')}" placeholder="Duty officer, number or bridge"></label><span></span></div>`}).join('')}</div>`:'<div class="flag warn">Pick at least two sectors to build the crosswalk.</div>'}
+ ${P.length>1?`<h3>Who depends on whom</h3><p class="muted">Read across: the row sector depends on the column sector. Click a cell to cycle none, uses, critical.</p>
+ <div class="tw"><table class="xwm"><thead><tr><th>Depends on →</th>${P.map(p=>`<th title="${esc(p.name)}">${SAB[p.id]}</th>`).join('')}</tr></thead><tbody>${P.map(a=>`<tr><td><b>${esc(a.name)}</b></td>${P.map(b=>{if(a===b)return '<td class="self">-</td>';const v=depOf(a.id,b.id);return `<td><button type="button" class="dep lv${v}" data-act="xwDep" data-a="${a.id}" data-b="${b.id}" aria-label="${esc(a.name)} depends on ${esc(b.name)}: ${DEPLAB[v]||'none'}">${DEPLAB[v]||'·'}</button></td>`}).join('')}</tr>`).join('')}</tbody></table></div>
+ <div class="wzlist">${x.hubs.slice(0,3).map(h=>`<div class="flag warn"><b>${esc(h.s.name)}</b> is critical to ${h.by.length} other sector${h.by.length===1?'':'s'} (${h.by.map(q=>esc(q.name)).join(', ')}). Its liaison belongs on the dependency ladders, and its restoration priorities should be shared early.</div>`).join('')}
+ ${x.miss.map(m=>`<div class="flag bad"><b>${esc(m.s.name)}</b> is not in the crosswalk, but ${m.by.map(q=>esc(q.name)).join(', ')} commonly depend${m.by.length===1?'s':''} on it. Add it, or name who you would call.</div>`).join('')}</div>`:''}
+ </section>`}
 function renderKit(){const groups=[...new Set(allAssets().map(a=>a.g))];const types=[...new Set(activeFns().map(f=>f.type||'any'))];
- $('kit').innerHTML=`<section class="card"><h2><span class="n">2</span>Your kit</h2>
+ $('kit').innerHTML=`<section class="card"><h2><span class="n">2</span>Your communications kit</h2>
  <p class="muted">${T().kitIntro} Blue tags are the path each asset rides. Grey tags are what it needs to work.</p>
  ${!invList().length?`<div class="flag warn">Your kit is empty. Select what you carry and can operate, and the plan builds itself.</div>`:''}
  <div class="kitsum"><b>${invList().length}</b> selected${invList().length?' <button type="button" class="btn sm" data-act="clearKit">Clear kit</button>':''}${invList().length?' · usable distinct paths: '+types.map(ty=>`${ty==='any'?'all functions':TYPES[ty].split(' /')[0].toLowerCase()} <b>${(AUTOS[ty]||{k:0}).k}</b>`).join(', '):''}${types.some(ty=>invList().length&&(AUTOS[ty]||{k:0}).k<4)?' <span class="flag warn">A full ladder needs four</span>':''}</div></section>
@@ -620,7 +624,7 @@ function renderKit(){const groups=[...new Set(allAssets().map(a=>a.g))];const ty
  <section class="card"><h3>Add a new module</h3><p class="muted">For gear that fits none of the groups above.</p>
   ${addForm('new','')}</section>`}
 function addForm(gi,g){return `<details class="addit"><summary>${g?'Add an item to '+esc(g):'Add a module and its first item'}</summary>
-  <div class="grid2">${gi==='new'?`<label class="fld">Module name<input type="text" id="cg-new" placeholder="e.g. Local partners"></label>`:''}<label class="fld">Item name<input type="text" id="cn-${gi}" placeholder="e.g. County EOC satellite VoIP"></label>
+  <div class="grid2">${gi==='new'?`<label class="fld">Module name<input type="text" id="cg-new" placeholder="e.g. Local business partners"></label>`:''}<label class="fld">Item name<input type="text" id="cn-${gi}" placeholder="e.g. Backup carrier hotspot at the DR site"></label>
   <label class="fld">Path it rides<select id="cp-${gi}">${Object.entries(PATHS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
   <label class="fld">Mode<input type="text" id="cm-${gi}" placeholder="Voice, text, data"></label></div>
   <div class="row">${Object.entries(CONDS).map(([k,v])=>`<label class="row" style="gap:4px;font-size:13px"><input type="checkbox" class="cc-${gi}" value="${k}"> needs ${v}</label>`).join('')}</div>
@@ -636,7 +640,7 @@ function renderPlan(){const t=T();
  ${tabsHTML()}
  <div class="row" style="gap:8px"><h3 style="flex:1 1 200px">${esc(fo.name)}</h3><span class="chip">${fnSub(fo)}</span></div>
  <div class="autobar ${manual?'':'auto'}"><span>${manual?'<b>Customized ladder.</b> You changed this function\'s rungs.':'<b>Auto-built from your kit.</b> Change any rung to customize.'}</span>${manual?'<button type="button" class="btn sm" data-act="resetAuto">Reset to auto</button>':''}</div>
- ${t.ro?`<label class="fld">Reach-out point outside the impact area<input type="text" id="ro-${f}" data-bind="fns.${S.fns.findIndex(x=>x.id===f)}.ro" value="${esc(fo.ro||'')}" placeholder="e.g. Neighboring state EOC duty officer, 555-0100"></label>`:''}
+ ${t.ro?`<label class="fld">Reach-out point outside the impact area<input type="text" id="ro-${f}" data-bind="fns.${S.fns.findIndex(x=>x.id===f)}.ro" value="${esc(fo.ro||'')}" placeholder="e.g. Unaffected regional office duty manager, 555-0100"></label>`:''}
  ${au.k<4&&!manual?`<div class="flag warn">Your kit has only ${au.k} mutually distinct path${au.k===1?'':'s'} suited to this function${fo.type&&fo.type!=='any'?' ('+TYPES[fo.type].toLowerCase()+')':''}. Add more in section 2.</div>`:''}
  <div class="rungs">${v.rows.map(r=>{const bad=v.cl.filter(c=>c.i===r.i||c.j===r.i);const why=r.A?rationale(v.ids,r.i,f):null;
   const pool=invList().filter(a=>suits(a,fo.type||'any')||a.id===r.id);
@@ -699,26 +703,37 @@ function renderDrill(){const Fs=activeFns();if(!invList().length||!Fs.length){$(
  <div class="tw"><table><thead><tr><th>Scenario</th>${Fs.map(f=>`<th>${esc(f.name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
  <div class="tip">Scenario rules are planning assumptions, not engineering analysis. Treat a pass as "worth testing," not as proof.</div></section>`}
 function schedule(){const t=[];activeFns().forEach(f=>view(f.id).rows.forEach(r=>{if(!r.A)return;const d=new Date();d.setDate(d.getDate()+CAD[r.cad]);t.push({f,r,d})}));return t.sort((a,b)=>a.d-b.d)}
+function brief(){return activeFns().map(f=>{const lost=SCEN.filter(s=>!drillF(f.id,s).ok);return{f,held:SCEN.length-lost.length,lost}}).sort((a,b)=>(+a.f.pri||9)-(+b.f.pri||9))}
+function stdRows(G){const ok=Object.fromEntries((G||gates()).map(g=>[g.k,g.ok]));return STDS.filter(x=>!x.tiers||x.tiers.includes(TIER)).map(x=>{const gs=x.g.filter(k=>k in ok);return{...x,gs,ok:gs.length>0&&gs.every(k=>ok[k]),open:gs.filter(k=>!ok[k])}})}
+function briefHTML(){if(!T().fnx)return '';const B=brief(),bad=B.filter(b=>b.lost.length);
+ return `<section class="card"><h3>Executive brief: can we shift?</h3><p class="muted">One line per essential function, highest priority first. A function that is lost in a drill is a place where the business cannot shift today.</p>
+ <div class="${bad.length?'flag bad':'flag good'}">${bad.length?`${bad.length} of ${B.length} essential function${B.length===1?'':'s'} would go dark in at least one drill. Start with ${esc(bad[0].f.name)}.`:`Every essential function keeps a working path in all ${SCEN.length} drills.`}</div>
+ <div class="tw"><table><thead><tr><th>Function</th><th>Priority</th><th>RTO</th><th>Drills held</th><th>Goes dark in</th></tr></thead><tbody>${B.map(b=>`<tr><td><b>${esc(b.f.name)}</b></td><td>${esc(b.f.pri||'-')}</td><td>${esc(b.f.rto||'not set')}</td><td class="mono">${b.held}/${SCEN.length}</td><td>${b.lost.length?b.lost.map(s=>esc(s.name)).join(', '):'<span class="muted">None</span>'}</td></tr>`).join('')}</tbody></table></div></section>`}
+function stdHTML(G){if(!T().owner)return '';const R=stdRows(G);
+ return `<section class="card"><h3>Standards crosswalk</h3><p class="muted">Where this plan gives evidence for common continuity and incident standards. A row is supported when the readiness gates it relies on pass. This is a planning aid, not a compliance determination: check the standard itself with your auditor.</p>
+ <div class="tw"><table><thead><tr><th>Standard</th><th>What it asks for</th><th>Evidence in this plan</th><th>Status</th></tr></thead><tbody>${R.map(r=>`<tr><td><b>${esc(r.s)}</b></td><td>${esc(r.c)}</td><td class="sc-brief">${r.gs.map(esc).join(', ')}</td><td><span class="chip ${r.ok?'okc':'noc'}">${r.ok?'Supported':'Open: '+esc(r.open.join(', '))}</span></td></tr>`).join('')}</tbody></table></div></section>`}
 function renderReady(){if(!invList().length){$('ready').innerHTML='';return}
  const G=gates(),ready=G.every(g=>g.ok);const tests=schedule();
  $('ready').innerHTML=`<section class="card"><h2><span class="n">5</span>Ready for testing</h2>
  <div class="ready ${ready?'yes':'no'}"><span class="big">${G.filter(g=>g.ok).length}/${G.length}</span><div style="flex:1;min-width:200px"><b>${ready?'Ready for testing':'Not ready for testing yet'}</b><p class="muted">${ready?'Run the first test below with your far end, then share the PDF.':'Each open gate below says what is missing. A PDF exported now is marked Draft.'}</p></div><button type="button" class="btn pri" data-act="pdf">Download shared plan</button></div>
  <div class="gates">${G.map(g=>`<div class="gate"><span class="st ${g.ok?'ok':'no'}">${g.ok?'PASS':'OPEN'}</span><div><b>${g.k}</b><small>${g.d}</small>${!g.ok&&g.miss&&!g.att?`<div class="miss">${g.miss}</div>`:''}${g.att?`<label class="row" style="gap:6px;margin-top:6px;font-size:13px"><input type="checkbox" id="att-${g.att}" data-act="attest" data-k="${g.att}" ${S.attest[g.att]?'checked':''}> I've confirmed this</label>${!g.ok&&S.attest[g.att]&&g.miss?`<div class="miss">${g.miss}</div>`:''}`:''}</div></div>`).join('')}</div></section>
+ ${briefHTML()}${stdHTML(G)}
  <section class="card"><h3>First tests</h3><p class="muted">Dated from today by each rung's cadence. A test means a real two-way exchange with your far end, not a signal check.</p>
  <div class="tw"><table><thead><tr><th>Due</th><th>Function</th><th>Rung</th><th>Test</th></tr></thead><tbody>${tests.map(t=>`<tr><td class="mono">${t.d.toISOString().slice(0,10)}</td><td>${esc(t.f.name)}</td><td><span class="lvl sm ${t.r.l.c}">${t.r.l.k}</span></td><td>${esc(t.r.A.name)} on ${esc(t.r.contact||'(add contact)')}${T().owner?' by '+esc(t.r.owner||'(add owner)'):''}. Confirm two-way.</td></tr>`).join('')}</tbody></table></div></section>
  <section class="card"><h3>Share</h3><p class="muted">The <b>shared plan</b> is the one to give to others: how to reach you and when you are listening. The <b>planning report</b> adds the drills, gates, and reasoning for your own files.</p>
  <div class="row"><button type="button" class="btn pri" data-act="pdf">Download shared plan (PDF)</button><button type="button" class="btn" data-act="pdfFull">Planning report (PDF)</button><button type="button" class="btn" data-act="allPdf">All plans (one PDF)</button><button type="button" class="btn" data-act="csv">Export CSV</button><button type="button" class="btn" data-act="copy">Copy as text</button><button type="button" class="btn" data-act="reset">${RESETARM?'Erase this plan? Click again':'Start over'}</button></div>
  <label class="row" style="gap:6px;font-size:13px"><input type="checkbox" data-act="csvc" ${CSVC?'checked':''}> Include contact details in the CSV (numbers, frequencies, call signs, names, reach-out points). Leave off when compiling plans across organizations.</label>
  <textarea id="out" readonly aria-label="Plan as plain text">${esc(planText())}</textarea></section>`}
-function render(){curTab();computeAutos();renderHead();renderFns();renderStatus();renderKit();renderPlan();renderMatrix();renderDrill();renderReady();save()}
+function render(){curTab();computeAutos();renderHead();renderFns();renderXW();renderStatus();renderKit();renderPlan();renderMatrix();renderDrill();renderReady();save()}
 function light(){renderStatus();renderMatrix();renderDrill();renderReady()}
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),2200)}
 
 /* ================= export ================= */
-function planText(){const Fs=activeFns();let t=`HOW TO REACH ${S.who||'(name)'} (${T().label} PACE plan)\n${T().baseL}: ${S.base||'(not set)'}${T().owner?'\nPrepared by: '+(S.by||'(not set)'):''}\nUpdated ${new Date().toISOString().slice(0,10)}\nTry the methods in order, P to E.\n`;
+function planText(){const Fs=activeFns();let t=`HOW TO REACH ${S.who||'(name)'} (${T().label} PACE plan)\n${T().baseL}: ${S.base||'(not set)'}${T().owner?'\nPrepared by: '+(S.by||'(not set)'):''}${T().actL?'\n'+T().actL+': '+(S.act||'(not set)'):''}${T().sectorPick&&S.sector?'\nSector: '+SEC[S.sector].name:''}\nUpdated ${new Date().toISOString().slice(0,10)}\nTry the methods in order, P to E.\n`;
  Fs.forEach(f=>{t+=`\n== ${f.name} (${fnSub(f)}) ==\n`;if(T().ro)t+=`Reach-out outside impact area: ${f.ro||'(not set)'}\n`;
   view(f.id).rows.forEach(r=>{t+=`${r.l.k} ${r.A?r.A.name:'(empty)'} | ${r.contact||'(add contact)'} | ${r.mode||'-'} | ${r.A?monShort(r.mon):''}${T().owner?' | answered by '+(r.owner||'-'):''}${r.tested?' | tested '+r.tested:''}\n`;
    if(r.i<3)t+=`   try ${LEVELS[r.i+1].name} if: ${r.trig}\n`})});
+ if(T().xw&&xwOn().length){t+='\nSECTOR LIAISONS\n';xwOn().forEach(p=>{const v=S.xw.sec[p.id];t+=`  - ${p.name}: ${v.org||'(liaison not set)'} | ${v.contact||'(contact not set)'}\n`})}
  if(altList().length){t+='\nBACKUP METHODS (any order)\n';altList().forEach(x=>{t+=`  - ${altLine(x)}\n`})}
  t+='\nWHEN WE START LISTENING\n';listenRows().forEach(r=>{t+=`${r[0]}:\n`;r[1].forEach(x=>{t+=`  - ${itemLine(x)}\n`})});
  t+=`\nReadiness: ${gates().map(g=>`${g.k} ${g.ok?'PASS':'OPEN'}`).join(' | ')}\n`;return t}
@@ -741,7 +756,7 @@ function buildPDF(){
  doc.setFillColor(...C.ink);doc.rect(0,0,W,104,'F');
  [10,16,22,28].forEach((h,i)=>{doc.setFillColor(...C.lv[3-i]);doc.rect(M+i*8,62-h,6,h,'F')});
  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(125,200,220);doc.text(t.doc,M+40,40);
- doc.setFontSize(22);doc.setTextColor(...C.white);doc.text(who,M+40,62,{maxWidth:330});
+ let fs=22;doc.setFontSize(fs);while(fs>11&&doc.getTextWidth(who)>330){fs-=1;doc.setFontSize(fs)}doc.setTextColor(...C.white);doc.text(who,M+40,62,{maxWidth:335});
  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(190,205,210);
  doc.text(`${pdfSafe(S.base||t.baseL+' not set')}   |   Generated ${today}`,M,88,{maxWidth:CW});
  const pill=ready?'READY FOR TESTING':'DRAFT - NOT READY';doc.setFont('helvetica','bold');doc.setFontSize(8.5);
@@ -756,10 +771,22 @@ function buildPDF(){
   columnStyles:{0:{cellWidth:96,fontStyle:'bold'}},
   didParseCell:d=>{if(d.section==='body'&&d.column.index>0){d.cell.styles.lineWidth={left:2.5,top:.5,right:.5,bottom:.5};d.cell.styles.lineColor=C.line;d.cell.styles.fontSize=7.5}}});
  after();
- section('Readiness gates','NCSWIC criteria: feasible, acceptable, suitable, distinguishable, complete');
+ if(t.fnx){const B=brief();section('Executive brief','Can the business shift?');
+  doc.autoTable({...base,startY:y,head:[['Function','Priority','RTO','Drills held','Goes dark in']],body:B.map(b=>[pdfSafe(b.f.name),String(b.f.pri||'-'),pdfSafe(b.f.rto||'not set'),`${b.held}/${SCEN.length}`,b.lost.length?pdfSafe(b.lost.map(x=>x.name).join(', ')):'None']),columnStyles:{0:{cellWidth:170,fontStyle:'bold'},1:{cellWidth:48,halign:'center'},2:{cellWidth:62},3:{cellWidth:56,halign:'center'}},
+   didParseCell:d=>{if(d.section==='body'&&d.column.index===4){const bad=B[d.row.index].lost.length;d.cell.styles.textColor=bad?C.bad:C.good}}});after()}
+ section('Readiness gates','CISA / NCSWIC PACE criteria, plus monitoring and drills');
  doc.autoTable({...base,startY:y,head:[['Gate','Status','What it checks']],body:G.map(g=>[g.k,g.ok?'PASS':'OPEN',pdfSafe(g.d)]),columnStyles:{0:{cellWidth:120,fontStyle:'bold'},1:{cellWidth:52,halign:'center',fontStyle:'bold'}},
   didParseCell:d=>{if(d.section==='body'&&d.column.index===1){const ok=d.cell.raw==='PASS';d.cell.styles.fillColor=ok?C.goodBg:C.badBg;d.cell.styles.textColor=ok?C.good:C.bad}}});
  after();
+ if(t.owner){const R=stdRows(G);section('Standards crosswalk','Planning aid, not a compliance determination');
+  doc.autoTable({...base,startY:y,head:[['Standard','What it asks for','Evidence','Status']],body:R.map(r=>[pdfSafe(r.s),pdfSafe(r.c),pdfSafe(r.gs.join(', ')),r.ok?'Supported':'Open']),columnStyles:{0:{cellWidth:110,fontStyle:'bold'},2:{cellWidth:120},3:{cellWidth:60,halign:'center',fontStyle:'bold'}},
+   didParseCell:d=>{if(d.section==='body'&&d.column.index===3){const ok=d.cell.raw==='Supported';d.cell.styles.fillColor=ok?C.goodBg:C.badBg;d.cell.styles.textColor=ok?C.good:C.bad}}});after()}
+ if(t.xw&&xwOn().length>1){const x=xwFindings(),P=x.P;doc.addPage();y=M+10;section('Sector crosswalk',`${P.length} participating sectors`);
+  doc.autoTable({...base,startY:y,head:[['Sector','Liaison organization','24/7 contact']],body:P.map(p=>{const v=S.xw.sec[p.id];return[pdfSafe(p.name),pdfSafe(v.org||'(not set)'),pdfSafe(v.contact||'(not set)')]}),columnStyles:{0:{cellWidth:150,fontStyle:'bold'}}});after(16);
+  doc.autoTable({...base,startY:y,head:[['Depends on',...P.map(p=>SAB[p.id])]],body:P.map(a=>[pdfSafe(a.name),...P.map(b=>a===b?'-':DEPLAB[depOf(a.id,b.id)])]),styles:{...base.styles,fontSize:P.length>8?6.5:8,halign:'center'},columnStyles:{0:{cellWidth:110,halign:'left',fontStyle:'bold'}},
+   didParseCell:d=>{if(d.section==='body'&&d.column.index>0){if(d.cell.raw==='Critical'){d.cell.styles.fillColor=C.badBg;d.cell.styles.textColor=C.bad;d.cell.styles.fontStyle='bold'}else if(d.cell.raw==='Uses'){d.cell.styles.textColor=C.warn}}}});after(14);
+  const notes=[...x.hubs.slice(0,3).map(h=>`${h.s.name} is critical to ${h.by.length} other sector${h.by.length===1?'':'s'}: ${h.by.map(q=>q.name).join(', ')}.`),...x.miss.map(m=>`${m.s.name} is not in the crosswalk, but ${m.by.map(q=>q.name).join(', ')} commonly depend on it.`)];
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...C.ink);notes.forEach(n=>{const l=doc.splitTextToSize('- '+pdfSafe(n),CW);ensure(l.length*11+4);doc.text(l,M,y);y+=l.length*11+3});y+=10}
  let held=0,tot=0;const mtx=SCEN.map(s=>Fs.map(f=>{const d=drillF(f.id,s);tot++;if(d.ok)held++;return d}));
  section('Stress test results',`${held} of ${tot} function-scenarios held`);
  doc.autoTable({...base,startY:y,head:[['Scenario',...Fs.map(f=>pdfSafe(f.name))]],body:SCEN.map((s,si)=>[pdfSafe(s.name),...mtx[si].map(d=>d.ok?LEVELS[d.lvl].k+'  '+LEVELS[d.lvl].name:'LOST')]),columnStyles:{0:{cellWidth:Fs.length>5?120:170}},styles:{...base.styles,fontSize:Fs.length>5?7:8.5},
@@ -801,7 +828,7 @@ function buildPDF(){
   if(!ready){doc.saveGraphicsState();doc.setGState(new doc.GState({opacity:.06}));doc.setFont('helvetica','bold');doc.setFontSize(110);doc.setTextColor(...C.warn);doc.text('DRAFT',W/2,H/2+60,{align:'center',angle:35});doc.restoreGraphicsState()}
   if(p>1){doc.setFillColor(...C.ink);doc.rect(0,0,W,22,'F');doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...C.white);doc.text(t.doc+'  |  '+who.toUpperCase(),M,14);doc.setTextColor(125,200,220);doc.text(ready?'READY FOR TESTING':'DRAFT',W-M,14,{align:'right'})}
   doc.setDrawColor(...C.line);doc.setLineWidth(.5);doc.line(M,H-40,W-M,H-40);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...C.muted);
-  doc.text('Built with PACE Snap. Framework: NCSWIC, "Leveraging the PACE Plan into the Emergency Communications Ecosystem" (2023).',M,H-28);doc.text(`Page ${p} of ${n}`,W-M,H-28,{align:'right'})}
+  doc.text('Built with PACE Snap for Business Continuity. Plan criteria adapted from NCSWIC/CISA PACE guidance (2023).',M,H-28);doc.text(`Page ${p} of ${n}`,W-M,H-28,{align:'right'})}
  doc.setProperties({title:`${t.label} PACE Plan - ${who}`,subject:'PACE communications plan',creator:'PACE Snap'});return doc}
 function buildSharedPDF(into){
  const {jsPDF}=window.jspdf;const doc=into||new jsPDF({unit:'pt',format:'letter'});if(into)doc.addPage();const p0=doc.getNumberOfPages();
@@ -819,11 +846,12 @@ function buildSharedPDF(into){
  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(125,200,220);doc.text('HOW TO REACH   |   '+t.label.toUpperCase()+' PACE PLAN',M+40,38);
  let fs=24;doc.setFontSize(fs);while(fs>11&&doc.getTextWidth(who)>335){fs-=1;doc.setFontSize(fs)}doc.setTextColor(...C.white);doc.text(who,M+40,64,{maxWidth:340});
  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(190,205,210);
- doc.text([S.base?pdfSafe(S.base):null,'Updated '+today,t.owner&&S.by?'Prepared by '+pdfSafe(S.by):null].filter(Boolean).join('   |   '),M,92,{maxWidth:CW});
+ doc.text([S.base?pdfSafe(S.base):null,t.sectorPick&&S.sector?SEC[S.sector].name+' sector':null,'Updated '+today,t.owner&&S.by?'Prepared by '+pdfSafe(S.by):null].filter(Boolean).join('   |   '),M,92,{maxWidth:CW});
+ if(t.actL&&S.act){doc.setFont('helvetica','bold');doc.setTextColor(125,200,220);doc.text(pdfSafe(t.actL+': '+S.act),M,106,{maxWidth:CW})}
  const pill=ready?'READY FOR TESTING':'DRAFT - NOT YET TESTED';doc.setFont('helvetica','bold');doc.setFontSize(8.5);
  const pw=doc.getTextWidth(pill)+22;doc.setFillColor(...(ready?C.good:C.warn));doc.roundedRect(W-M-pw,34,pw,22,4,4,'F');doc.setTextColor(...C.white);doc.text(pill,W-M-pw/2,48.5,{align:'center'});
  y=140;
- const intro="Try the contact methods in order, from P to E. If there is no answer, move to the next one. Methods marked \"When\" are only monitored after the event listed, or once the methods above them are not working. When you reach us, say who you are, where you are, and how to call you back.";
+ const intro="Try the contact methods in order, from P to E. If there is no answer, move to the next one. Methods marked \"When\" are only monitored after the event listed, or once the methods above them are not working. In a cyber incident, do not use company email or chat unless told it is safe. When you reach us, say who you are, where you are, your status, and what you need.";
  const il=doc.splitTextToSize(intro,CW-24);doc.setFillColor(...C.panel);doc.roundedRect(M,y-12,CW,il.length*11+16,4,4,'F');doc.setFillColor(...C.accent);doc.rect(M,y-12,3,il.length*11+16,'F');
  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...C.ink);doc.text(il,M+14,y+1);y+=il.length*11+30;
  const lw=CW/4;LEVELS.forEach((l,i)=>{const x=M+i*lw;doc.setFillColor(...C.lv[i]);doc.roundedRect(x,y-12,18,18,3,3,'F');doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...C.ink);doc.text(l.k,x+9,y+1,{align:'center'});doc.text(l.name.toUpperCase(),x+24,y-2);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.muted);doc.text(l.blurb,x+24,y+8,{maxWidth:lw-28})});
@@ -836,6 +864,8 @@ function buildSharedPDF(into){
    columnStyles:{0:{cellWidth:24,halign:'center',fontSize:13,fontStyle:'bold'},1:{cellWidth:128,fontStyle:'bold',fontSize:9.5},2:{cellWidth:116},3:{cellWidth:136}},
    didParseCell:d=>{if(d.section==='body'){const r=v.rows[d.row.index];if(d.column.index===0)d.cell.styles.fillColor=C.lv[d.row.index];if(d.column.index===1&&!r.contact.trim())d.cell.styles.textColor=C.bad}}});
   y=doc.lastAutoTable.finalY+22});
+ if(t.xw&&xwOn().length){const P=xwOn();ensure(60+P.length*14);heading('Sector liaisons','Who speaks for each sector');
+  doc.autoTable({...base,startY:y,head:[['Sector','Liaison organization','24/7 contact']],body:P.map(p=>{const v=S.xw.sec[p.id];return[pdfSafe(p.name),pdfSafe(v.org||'(not set)'),pdfSafe(v.contact||'(not set)')]}),columnStyles:{0:{cellWidth:150,fontStyle:'bold'},2:{fontStyle:'bold'}}});y=doc.lastAutoTable.finalY+22}
  if(altList().length){const al=altList();ensure(60+al.length*14);heading('Backup methods','Also reachable by, in any order');
   doc.autoTable({...base,startY:y,head:[['Method','Contact','Note']],body:al.map(x=>[pdfSafe(asset(x.id).name),pdfSafe(x.contact||'(not set)'),pdfSafe(x.note||'')]),columnStyles:{0:{cellWidth:170,fontStyle:'bold'},1:{cellWidth:150,fontStyle:'bold'}}});y=doc.lastAutoTable.finalY+22}
  ensure(130);heading('When we start listening','Methods that are not always monitored');
@@ -849,7 +879,7 @@ function buildSharedPDF(into){
   if(!ready){doc.saveGraphicsState();doc.setGState(new doc.GState({opacity:.06}));doc.setFont('helvetica','bold');doc.setFontSize(110);doc.setTextColor(...C.warn);doc.text('DRAFT',W/2,H/2+60,{align:'center',angle:35});doc.restoreGraphicsState()}
   if(p>p0){doc.setFillColor(...C.ink);doc.rect(0,0,W,22,'F');doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...C.white);doc.text('HOW TO REACH  |  '+who.toUpperCase(),M,14);doc.setTextColor(125,200,220);doc.text(ready?'READY FOR TESTING':'DRAFT',W-M,14,{align:'right'})}
   doc.setDrawColor(...C.line);doc.setLineWidth(.5);doc.line(M,H-40,W-M,H-40);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...C.muted);
-  doc.text('Keep a printed copy where you can find it without power or network. Built with PACE Snap. Framework: NCSWIC PACE guidance (2023).',M,H-28);doc.text(`Page ${p-p0+1} of ${n-p0+1}`,W-M,H-28,{align:'right'})}
+  doc.text('Keep a printed copy where you can find it without power, network or your laptop. Built with PACE Snap for Business Continuity.',M,H-28);doc.text(`Page ${p-p0+1} of ${n-p0+1}`,W-M,H-28,{align:'right'})}
  if(!into)doc.setProperties({title:`How to reach ${who}`,subject:'PACE contact plan',creator:'PACE Snap'});return doc}
 async function exportPDF(btn,kind){const label=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Building PDF…'}
  try{await loadPdfLibs()}catch(e){toast('Couldn\'t load the PDF engine. Connect to the internet and try again.');if(btn){btn.disabled=false;btn.textContent=label}return}
@@ -861,7 +891,7 @@ async function exportPDF(btn,kind){const label=btn&&btn.textContent;if(btn){btn.
 async function exportAll(btn){const label=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Building PDF…'}
  try{await loadPdfLibs()}catch(e){toast('Couldn\'t load the PDF engine. Connect to the internet and try again.');if(btn){btn.disabled=false;btn.textContent=label}return}
  save();const oT=TIER,oS=S;let doc=null,n=0;
- try{for(const k of Object.keys(TIERS)){let p=null;if(k===oT)p=oS;else{try{const r=localStorage.getItem('pace-snap-v5-'+k);if(r)p=cleanPlan(k,JSON.parse(r))}catch(e){}}
+ try{for(const k of Object.keys(TIERS)){let p=null;if(k===oT)p=oS;else{try{const r=localStorage.getItem('pace-biz-v1-'+k);if(r)p=cleanPlan(k,JSON.parse(r))}catch(e){}}
    if(!p)continue;TIER=k;S=p;SCEN=T().scen;ASSETS=T().assets;computeAutos();
    if(!invList().length||!activeFns().length)continue;doc=buildSharedPDF(doc);n++}}
  catch(e){console.error(e);toast('PDF export failed: '+e.message);doc=null}
@@ -872,9 +902,9 @@ async function exportAll(btn){const label=btn&&btn.textContent;if(btn){btn.disab
 /* ================= events ================= */
 /* ================= onboarding, save/load, csv ================= */
 let CSVC=false,ONB=0,SAMPLEARM=false,RESETARM=false;
-/* ---- guided setup: learn the app by building your Personal PACE plan ---- */
+/* ---- guided setup: learn the app by building your Frontline PACE plan ---- */
 const WZ=[
- {n:'You',t:'Let\'s build your Personal PACE plan'},
+ {n:'You',t:'Let\'s build your Frontline PACE plan'},
  {n:'The idea',t:'The PACE idea'},
  {n:'Reasons',t:'Why people need to reach you'},
  {n:'Your kit',t:'What you actually have'},
@@ -889,43 +919,46 @@ const wzTip=h=>`<div class="wztip"><b>Mindset.</b> ${h}</div>`;
 const wzUsed=()=>{const m=new Map();activeFns().forEach(f=>view(f.id).rows.forEach(r=>{if(!r.A)return;if(!m.has(r.id))m.set(r.id,{A:r.A,fns:[]});m.get(r.id).fns.push(f)}));return[...m.values()]};
 const wzFirst=(o,u)=>{for(const f of u.fns){const v=o==='c'?contactOf(f.id,u.A.id):((S.tested[f.id]||{})[u.A.id]||'');if(v)return v}return ''};
 function contactHint(A){const p=A.path;
- if(p.some(x=>['att','vz','tmo','wire'].includes(x)))return 'Phone number, e.g. 503-555-0123';
+ if(p.some(x=>['att','vz','tmo','pstn'].includes(x)))return 'Phone number, e.g. 205-555-0123';
  if(p.some(x=>['iridium','msat','starlink','geo'].includes(x)))return 'Satellite number, device name or account';
+ if(p.some(x=>['mass','vendor','bridge'].includes(x)))return 'Number, PIN or keyword';
  if(p.includes('hf'))return 'Call sign and frequency or ALE address';
  if(p.includes('mesh'))return 'Node name and channel';
- if(p.some(x=>['lmr','slmr','issi','simplex','rptr','prptr','manet'].includes(x)))return 'Talkgroup, channel or repeater';
+ if(p.some(x=>['radio','simplex'].includes(x)))return 'Channel or talkgroup';
+ if(p.includes('bldg'))return 'Who triggers it, e.g. front desk';
  if(p.includes('human'))return 'Where to find you, or the rally point';
- if(p.includes('net')||p.includes('fiber')||p.includes('isp'))return 'Email address or app handle';
+ if(p.includes('web'))return 'Web address';
+ if(p.some(x=>['net','idp','wan','isp','govnet'].includes(x)))return 'Email, chat handle or portal';
  return 'How a caller reaches you on this'}
 function wzMonBase(f,id){const b={...monEff(f,id)};delete b.confirmed;return b}
 function wzMon(id,patch){activeFns().forEach(f=>{const o=monSet(f.id,id);Object.assign(o,wzMonBase(f.id,id),patch)});save()}
 function wzSync(){render();wzRender()}
-const wzStore=()=>{try{localStorage.setItem('pace-snap-onb-step',String(ONB))}catch(e){}};
+const wzStore=()=>{try{localStorage.setItem('pace-biz-onb-step',String(ONB))}catch(e){}};
 function wzBody(){const T_=T();
  switch(ONB){
- case 0:return `<p>In about ten minutes you will learn how PACE Snap works by building <b>your own plan</b>. Each step teaches one idea and asks for one thing. Everything saves as you go, so you can leave and pick up later with <b>Guided setup</b>.</p>
-  <div class="grid2"><label class="fld">Name or call sign<input type="text" data-w="who" value="${esc(S.who)}" placeholder="${esc(T_.whoP)}"></label><label class="fld">Home base / area<input type="text" data-w="base" value="${esc(S.base)}" placeholder="${esc(T_.baseP)}"></label></div>
+ case 0:return `<p>When a storm, a cyber incident or an outage hits, the business keeps running only if people can still reach each other and get what they need. In about ten minutes you will learn how PACE Snap works by building <b>your own Frontline plan</b>. Each step teaches one idea and asks for one thing. Everything saves as you go, so you can leave and pick up later with <b>Guided setup</b>.</p>
+  <div class="grid2"><label class="fld">${T_.whoL}<input type="text" data-w="who" value="${esc(S.who)}" placeholder="${esc(T_.whoP)}"></label><label class="fld">${T_.baseL}<input type="text" data-w="base" value="${esc(S.base)}" placeholder="${esc(T_.baseP)}"></label></div>
   <p class="muted">This appears at the top of the plan you share.</p>
   <div class="row" style="gap:8px"><button type="button" class="btn sm" data-act="wzSample">Just show me a finished sample plan</button></div>`;
  case 1:return `<p>PACE is a military-derived method. Instead of improvising when something fails, you decide in advance what comes next.</p>
-  <div class="lad">${LEVELS.map(l=>`<div><span class="lvl ${l.c}">${l.k}</span><span><b>${l.name}</b>: ${({P:'your everyday method (cell, VoIP, email)',A:'a common backup on a different path (a second carrier, SMS)',C:'a strategic fallback (satellite, a different location)',E:'the last resort (HF radio, SHARES, mesh, a runner)'})[l.k]}</span></div>`).join('')}</div>
-  <ul><li><b>Plan for losing what you depend on</b>, not for one kind of incident. A good plan is all-hazards.</li><li><b>Each rung needs its own failure path.</b> Two methods on the same tower, power feed or internet link are really one method.</li><li><b>Reachable means monitored.</b> A number nobody is watching is not a contact.</li><li><b>Untested is unproven.</b> At the end you will have a plan that is ready for testing, not yet trusted.</li></ul>
-  ${wzTip('This tool is about <b>how others reach you</b>. You will list the reasons people need you, the gear you have, and when you are listening on each method.')}`;
- case 2:{const sug=['My supervisor reaches me','My team reaches me in the field','My neighbors or community reach me'].filter(n=>!S.fns.some(f=>f.name===n));
+  <div class="lad">${LEVELS.map(l=>`<div><span class="lvl ${l.c}">${l.k}</span><span><b>${l.name}</b>: ${({P:'your everyday method (company phone, chat, email)',A:'a common backup on a different path (a personal phone on another carrier)',C:'a strategic fallback (the employee hotline, satellite text)',E:'the last resort (a pre-set rally point, two-way radio, a runner)'})[l.k]}</span></div>`).join('')}</div>
+  <ul><li><b>Plan for losing what you depend on</b>, not for one kind of incident. A good plan is all-hazards.</li><li><b>Each rung needs its own failure path.</b> Two methods on the same tower, power feed or internet link are really one method.</li><li><b>The company login is a single point of failure.</b> In a cyber incident, email, chat and the HR app can all go at once.</li><li><b>Reachable means monitored.</b> A number nobody is watching is not a contact.</li><li><b>Untested is unproven.</b> At the end you will have a plan that is ready for testing, not yet trusted.</li></ul>
+  ${wzTip('This tool is about <b>how others reach you, and how you reach them</b>. You will list the reasons, the tools you have, and when you are listening on each one.')}`;
+ case 2:{const sug=['My team lead reaches me on shift','I reach the coworker who covers for me','Customers or clients reach me'].filter(n=>!S.fns.some(f=>f.name===n));
   return `<p>Everyone reaches you for different reasons. <b>Each reason gets its own ladder</b>, because the best method for a duty officer is not the best one for your family. Keep what applies, and add your own.</p>
   <div class="wzlist">${S.fns.map((f,i)=>`<label class="wzchk"><input type="checkbox" data-act="wzFn" data-idx="${i}" ${f.on?'checked':''}><span>${esc(f.name)}</span></label>`).join('')}</div>
   ${sug.length?`<div class="row" style="gap:6px"><span class="muted">Add:</span>${sug.map(n=>`<button type="button" class="ev" data-act="wzFnAdd" data-n="${esc(n)}">+ ${esc(n)}</button>`).join('')}</div>`:''}
-  <div class="row" style="gap:8px;align-items:flex-end"><label class="fld" style="flex:1 1 240px">Another reason<input type="text" id="w-newfn" placeholder="e.g. My mutual-aid partners reach me"></label><label class="fld">Type<select id="w-newtype">${Object.entries(TYPES_S).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><button type="button" class="btn sm" data-act="wzFnAdd">Add</button></div>
-  ${wzTip('Think of the three people most likely to need you on your worst day. Their reasons are your functions.')}`}
+  <div class="row" style="gap:8px;align-items:flex-end"><label class="fld" style="flex:1 1 240px">Another reason<input type="text" id="w-newfn" placeholder="e.g. Dispatch reaches me on the road"></label><label class="fld">Type<select id="w-newtype">${Object.entries(TYPES_S).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><button type="button" class="btn sm" data-act="wzFnAdd">Add</button></div>
+  ${wzTip('Think of the three people most likely to need you on the company\'s worst day. Their reasons are your functions.')}`}
  case 3:{const groups=[...new Set(allAssets().map(a=>a.g))],inv=invList(),paths=new Set(inv.flatMap(a=>a.path)).size;
-  return `<p>Check <b>only what you really carry and can operate today</b>. The kit starts empty on purpose, so the plan reflects reality and not wishes.</p>
+  return `<p>Check <b>only what you really carry and can use today</b>, company-issued or your own. The kit starts empty on purpose, so the plan reflects reality and not wishes.</p>
   <div class="wzmeter ${paths>=4?'ok':''}"><b>${inv.length}</b> in your kit, on <b>${paths}</b> different path${paths===1?'':'s'}. ${paths>=4?'That is enough for a full four-rung ladder.':`You need methods on at least four different paths. Add ${4-paths} more.`}</div>
   ${groups.map(g=>`<div><h4 class="wzh">${esc(g)}</h4><div class="assets">${allAssets().filter(a=>a.g===g).map(a=>`<button type="button" class="asset" data-act="wzInv" data-id="${a.id}" aria-pressed="${!!S.inv[a.id]}"><span class="nm">${esc(a.name)}<span class="ck">${S.inv[a.id]?'✓ In kit':'+ Add'}</span></span><span class="nt">${esc(a.note)}</span><span class="tags">${pathChips(a)}</span></button>`).join('')}</div></div>`).join('')}
   <details class="addit"><summary>Something not listed? Add your own</summary><div class="grid2"><label class="fld">Item name<input type="text" id="w-cn" placeholder="e.g. Spare Verizon hotspot"></label><label class="fld">Module<select id="w-cg">${groups.map(g=>`<option>${esc(g)}</option>`).join('')}</select></label><label class="fld">Path it rides<select id="w-cp">${Object.entries(PATHS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label class="fld">Mode<input type="text" id="w-cm" placeholder="Voice, text, data"></label><label class="fld">It needs<select id="w-cc"><option value="">Nothing special</option>${Object.entries(CONDS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label></div><div><button type="button" class="btn sm" data-act="wzAddAsset">Add to kit</button></div></details>
-  ${wzTip('Count the <b>paths</b>, not the devices. Three phones on one carrier are still one path.')}`}
+  ${wzTip('Count the <b>paths</b>, not the devices. Three phones on one carrier are still one path, and email, chat and the HR app on one company login are one path too.')}`}
  case 4:{const inv=invList();
   return `<p>Every method is scored on four checks, 1 (weak) to 3 (strong). The plan builder uses your scores, so be honest. Your worst day is the test.</p>
-  <div class="wz4"><div><b>Power</b> battery or generator, and fuel</div><div><b>Availability</b> monitored 24/7 and recently tested</div><div><b>Compatibility</b> the other side can actually receive it (for example ALE for HF)</div><div><b>Ease</b> usable under stress, in the dark, in bad weather</div></div>
+  <div class="wz4"><div><b>Power</b> battery or generator, and fuel</div><div><b>Availability</b> monitored 24/7 and recently tested</div><div><b>Compatibility</b> the other side can actually receive it (for example, your manager has the same app)</div><div><b>Ease</b> usable under stress, in the dark, in bad weather</div></div>
   ${inv.length?`<div class="wzrate hd"><span></span>${['Power','Avail.','Compat.','Ease'].map(r=>`<span>${r}</span>`).join('')}</div>${inv.map(a=>{const r=effR(a);return `<div class="wzrate"><span class="nm">${esc(a.name)}</span>${r.map((v,k)=>`<select data-w="rate" data-id="${a.id}" data-k="${k}" aria-label="${esc(a.name)} ${RATE[k][0]}">${[1,2,3].map(n=>`<option value="${n}" ${v===n?'selected':''}>${n}</option>`).join('')}</select>`).join('')}</div>`}).join('')}`:'<div class="flag bad">Your kit is empty. Go back and add what you have.</div>'}
   ${wzTip('A method rated 1 on Availability or Ease is a method that will not be there when you need it. The builder avoids those.')}`}
  case 5:{const Fs=activeFns();if(!Fs.length)return '<div class="flag bad">No reasons are switched on. Go back to step 3.</div>';
@@ -965,16 +998,16 @@ function wzBody(){const T_=T();
   return `<p>Your plan: <b>${ok} of ${G.length}</b> readiness checks passing${ok===G.length?'. It is ready for testing.':'. Finish the open items any time from the full app.'}</p>
   <div class="wzcard"><b>Take it with you</b><div class="row" style="gap:8px"><button type="button" class="btn pri" data-act="pdf">Download shared plan (PDF)</button><button type="button" class="btn" data-act="saveFile">Save progress</button><button type="button" class="btn" data-act="csv">Export CSV</button></div><span class="muted" style="font-size:12.5px">The shared plan is what you give to others. Save progress lets you continue later or on another device.</span></div>
   <div class="wzcard"><b>Now test it</b><ol><li>Make a real two-way contact on each rung, starting with the lowest.</li><li>Write the date in "Last tested" and repeat on the schedule you set.</li><li>Print a copy and keep it where you can find it without power or network.</li></ol></div>
-  <div class="wzcard"><b>What next?</b><span class="muted" style="font-size:13px">The same flow works for a Unit, Agency, State or Region plan: pick a tier at the top of the full app. Use <b>Guided setup</b> any time to come back here.</span></div>`}}}
+  <div class="wzcard"><b>What next?</b><span class="muted" style="font-size:13px">The same flow works for a Site, Company, Sector or Crosswalk plan: pick a level at the top of the full app. Use <b>Guided setup</b> any time to come back here.</span></div>`}}}
 function wzRender(){const st=WZ[ONB],last=ONB===WZ.length-1,card=$('onbC'),old=$('onbB');const top=old?old.scrollTop:0;
  card.innerHTML=`<div class="wzh0"><div class="row" style="justify-content:space-between;gap:8px"><span class="mstep">Step ${ONB+1} of ${WZ.length} · ${st.n}</span><button type="button" class="btn sm" data-act="onbClose">Save and exit</button></div><h2 id="onbT">${st.t}</h2><div class="wzp" role="progressbar" aria-valuemin="1" aria-valuemax="${WZ.length}" aria-valuenow="${ONB+1}"><i style="width:${(ONB+1)/WZ.length*100}%"></i></div></div>
  <div class="wzb" id="onbB">${wzBody()}</div>
  <div class="wzf"><div class="dots" role="group" aria-label="Steps">${WZ.map((x,i)=>`<button type="button" data-act="onbGo" data-i="${i}" aria-label="Step ${i+1}: ${x.n}" ${i===ONB?'aria-current="step"':''}></button>`).join('')}</div>
  <div class="row" style="gap:8px">${ONB>0?'<button type="button" class="btn" data-act="onbBack">Back</button>':''}<button type="button" class="btn pri" data-act="${last?'onbClose':'onbNext'}">${last?'Finish':'Next'}</button></div></div>`;
  const nb=$('onbB');if(nb)nb.scrollTop=top}
-function onbOpen(){if(TIER!=='personal'){save();TIER='personal';loadState();render()}
- let n=0;try{n=+localStorage.getItem('pace-snap-onb-step')||0}catch(e){}ONB=Math.min(Math.max(n,0),WZ.length-1);wzRender();$('onb').hidden=false;$('onbC').focus()}
-function onbClose(){$('onb').hidden=true;wzStore();render();try{localStorage.setItem('pace-snap-onb','1')}catch(e){}}
+function onbOpen(){if(TIER!=='frontline'){save();TIER='frontline';loadState();render()}
+ let n=0;try{n=+localStorage.getItem('pace-biz-onb-step')||0}catch(e){}ONB=Math.min(Math.max(n,0),WZ.length-1);wzRender();$('onb').hidden=false;$('onbC').focus()}
+function onbClose(){$('onb').hidden=true;wzStore();render();try{localStorage.setItem('pace-biz-onb','1')}catch(e){}}
 function wzGo(i){if(i>ONB){if(ONB===2&&!activeFns().length)return toast('Keep at least one reason switched on');if(ONB===3&&!invList().length)return toast('Add at least one method you have')}
  ONB=Math.min(Math.max(i,0),WZ.length-1);wzStore();render();wzRender();const b=$('onbB');if(b)b.scrollTop=0;$('onbC').focus()}
 function wzIn(t,w,ev){const id=t.dataset.id;const text=['who','base','contact','rd','sched','tested','altc','altn'].includes(w);if(text!==(ev==='input'))return;
@@ -996,43 +1029,52 @@ function dl(name,text,type){const u=URL.createObjectURL(new Blob([text],{type}))
 function cleanPlan(k,p){const old=TIER;TIER=k;let b;try{b=fresh()}finally{TIER=old}const o={};
  for(const key of Object.keys(b)){if(!(key in p))continue;const v=p[key];if(Array.isArray(b[key])!==Array.isArray(v)||typeof v!==typeof b[key]||v===null)continue;o[key]=v}return Object.assign(b,o)}
 function saveFile(){save();const plans={};
- Object.keys(TIERS).forEach(k=>{if(k===TIER){plans[k]=S;return}try{const r=localStorage.getItem('pace-snap-v5-'+k);if(r)plans[k]=JSON.parse(r)}catch(e){}});
- dl(`PACE-Snap-Save-${slug(S.who)}-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({app:'pace-snap',version:5,saved:new Date().toISOString(),tier:TIER,plans},null,1),'application/json');toast('Progress saved to a file')}
+ Object.keys(TIERS).forEach(k=>{if(k===TIER){plans[k]=S;return}try{const r=localStorage.getItem('pace-biz-v1-'+k);if(r)plans[k]=JSON.parse(r)}catch(e){}});
+ dl(`PACE-Snap-Save-${slug(S.who)}-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({app:'pace-snap-biz',version:1,saved:new Date().toISOString(),tier:TIER,plans},null,1),'application/json');toast('Progress saved to a file')}
 function loadFromText(txt){let o;try{o=JSON.parse(txt)}catch(e){return toast('That file is not a PACE Snap save')}
- if(!o||o.app!=='pace-snap'||!o.plans||typeof o.plans!=='object')return toast('That file is not a PACE Snap save');
- const mem={};let n=0;Object.keys(TIERS).forEach(k=>{const p=o.plans[k];if(!p||typeof p!=='object'||Array.isArray(p))return;const c=cleanPlan(k,p);mem[k]=c;n++;try{localStorage.setItem('pace-snap-v5-'+k,JSON.stringify(c))}catch(e){}});
+ if(!o||o.app!=='pace-snap-biz'||!o.plans||typeof o.plans!=='object')return toast('That file is not a PACE Snap save');
+ const mem={};let n=0;Object.keys(TIERS).forEach(k=>{const p=o.plans[k];if(!p||typeof p!=='object'||Array.isArray(p))return;const c=cleanPlan(k,p);mem[k]=c;n++;try{localStorage.setItem('pace-biz-v1-'+k,JSON.stringify(c))}catch(e){}});
  if(!n)return toast('No plans found in that file');
  TIER=TIERS[o.tier]&&mem[o.tier]?o.tier:Object.keys(mem)[0];loadState();if(mem[TIER])S=mem[TIER];render();window.scrollTo({top:0});toast(`Loaded ${n} plan${n===1?'':'s'}`)}
 function csvCell(v){v=String(v??'');if(/^[=+\-@\t\r]/.test(v))v="'"+v;return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function buildCSV(inc){const t=T(),G=gates(),ok=G.filter(g=>g.ok).length,ready=G.every(g=>g.ok),now=new Date().toISOString().slice(0,10);
- const H=['schema','exported','tier','plan_name','jurisdiction_or_region','prepared_by','plan_ready','gates_passed','gates_total','function','function_type','priority_tier','rto','reach_out_point','rung','asset','failure_paths','mode','monitoring','monitor_triggers','ready_within','schedule','last_tested','test_cadence','step_down_trigger','contact','answered_by','note'];
- const base=[ 'pace-snap-csv-1',now,t.label,S.who,S.base,inc?S.by:'',ready?'yes':'no',ok,G.length];
+ const H=['schema','exported','tier','plan_name','location_or_area','prepared_by','activation_authority','sector','plan_ready','gates_passed','gates_total','function','function_type','priority_tier','rto','reach_out_point','rung','asset','failure_paths','mode','monitoring','monitor_triggers','ready_within','schedule','last_tested','test_cadence','step_down_trigger','contact','answered_by','note'];
+ const base=[ 'pace-snap-biz-csv-1',now,t.label,S.who,S.base,inc?S.by:'',S.act||'',t.sectorPick&&S.sector?SEC[S.sector].name:'',ready?'yes':'no',ok,G.length];
  const rows=[H];
  activeFns().forEach(f=>{const v=view(f.id);v.rows.forEach(r=>{const m=r.mon,a=r.A;
   rows.push([...base,f.name,TYPES[f.type||'any'],t.fnx?f.pri:'',t.fnx?(f.rto||''):'',inc&&t.ro?(f.ro||''):'',r.l.name,a?a.name:'',a?a.path.map(p=>PATHS[p]).join(' + '):'',a?r.mode:'',a?MONLAB[m.m]:'',a&&m.m==='trig'?(m.t||[]).map(e=>EVN[e]).filter(Boolean).join(' | '):'',a&&m.m==='trig'?(m.rd||''):'',a&&m.m==='sched'?(m.sched||''):'',a?r.tested:'',a?r.cad:'',r.i<3?r.trig:'',inc&&a?r.contact:'',inc&&a?r.owner:'',''])})});
  altList().forEach(x=>{const a=asset(x.id);rows.push([...base,'(plan-wide)','','','','','Backup',a.name,a.path.map(p=>PATHS[p]).join(' + '),'','','','','','','','',inc?x.contact:'','',x.note||''])});
+ if(t.xw)xwOn().forEach(p=>{const v=S.xw.sec[p.id];rows.push([...base,'(crosswalk)','','','','','Liaison',p.name,'','','','','','','','','',inc?(v.contact||''):'',inc?(v.org||''):'',SECTORS.filter(b=>b!==p&&xwOn().includes(b)&&depOf(p.id,b.id)===2).map(b=>b.name).join(' | ')?'Critically depends on: '+SECTORS.filter(b=>b!==p&&xwOn().includes(b)&&depOf(p.id,b.id)===2).map(b=>b.name).join(' | '):''])});
  return '﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n')+'\r\n'}
 function sampleContact(a,n){const p=a.path;
- if(p.some(x=>['att','vz','tmo','wire'].includes(x)))return `(555) 010-${String(100+n*7).slice(-3)}`;
+ if(p.some(x=>['att','vz','tmo','pstn'].includes(x)))return `(555) 010-${String(100+n*7).slice(-3)}`;
  if(p.some(x=>['iridium','msat','starlink','geo'].includes(x)))return `+8816 555 01${String(n).padStart(2,'0')}`;
+ if(p.includes('bridge'))return `(555) 010-0${String(n).padStart(2,'0')}, PIN EXAMPLE`;
+ if(p.some(x=>['mass','vendor'].includes(x)))return `(800) 555-01${String(n).padStart(2,'0')}`;
  if(p.includes('hf'))return `ALE EXAMPLE-${n}, 7.3 MHz`;
- if(p.some(x=>['lmr','slmr','issi','simplex','rptr','prptr','xb','dep','manet'].includes(x)))return `Talkgroup EXAMPLE-${n}`;
+ if(p.some(x=>['radio','simplex'].includes(x)))return `Channel EXAMPLE-${n}`;
+ if(p.includes('bldg'))return 'Front desk triggers';
+ if(a.id==='liaison')return 'State EOC private-sector desk';
  if(p.includes('human'))return `Rally point EXAMPLE-${n}`;
  if(p.includes('mesh'))return `Mesh channel EXAMPLE-${n}`;
- if(p.includes('net')||p.includes('fiber')||p.includes('isp'))return `duty${n}@example.org`;
+ if(p.includes('web'))return 'status.example.com';
+ if(p.some(x=>['net','idp','wan','isp','govnet'].includes(x)))return `duty${n}@example.com`;
  return `EXAMPLE contact ${n}`}
 function loadSample(){const t=T();S=fresh();S.sample=true;
- const nm={personal:'SAMPLE - Example Planner',unit:'SAMPLE - Example Strike Team',agency:'SAMPLE - Example County Emergency Management',state:'SAMPLE - Example State Emergency Management',region:'SAMPLE - Example Regional Group'}[TIER];
- S.who=nm;S.base='Example jurisdiction';S.by='Example Planner, Comms Lead';
+ const nm={frontline:'SAMPLE - Example Shift Lead',site:'SAMPLE - Example Distribution Center',company:'SAMPLE - Example Logistics, Inc.',sector:'SAMPLE - Example Utilities Mutual Assistance Group',crosswalk:'SAMPLE - Example Regional Business EOC'}[TIER];
+ S.who=nm;S.base='Example location';S.by='Example Planner, Business Continuity Lead';
+ if(t.actL)S.act={site:'General manager, then shift supervisor',company:'CEO, COO, or any two crisis team members',sector:'Watch officer or council chair',crosswalk:'BEOC director or state EOC private-sector liaison'}[TIER]||'';
+ if(t.sectorPick){S.sector='energy';S.fns.push({id:'fsec',name:SEC.energy.fn,type:'any',on:true,custom:true,pri:1,rto:'4 hours',ro:''})}
+ if(t.xw)['energy','coms','water','hph','trans','fin'].forEach((id,k)=>{S.xw.sec[id]={on:true,org:'Example '+SEC[id].name+' liaison',contact:`(555) 010-2${String(k).padStart(2,'0')}`}});
  allAssets().forEach(a=>S.inv[a.id]=true);computeAutos();
  const d=new Date(Date.now()-3*864e5).toISOString().slice(0,10);let n=1;const used=new Set();
  S.fns.forEach(f=>{if(!f.on)return;if(t.fnx&&!f.rto)f.rto=f.pri===1?'1 hour':'4 hours';if(t.ro)f.ro='Example unaffected-area duty officer, (555) 010-999'});
  activeFns().forEach(f=>{view(f.id).rows.forEach(r=>{if(!r.A)return;used.add(r.id);
   (S.contact[f.id]=S.contact[f.id]||{})[r.id]=sampleContact(r.A,n++);
-  if(t.owner)(S.owner[f.id]=S.owner[f.id]||{})[r.id]=['Watch supervisor','Duty officer','COMU','On-call comms lead'][r.i];
+  if(t.owner)(S.owner[f.id]=S.owner[f.id]||{})[r.id]=['Crisis team lead','Duty manager','Continuity coordinator','On-call IT lead'][r.i];
   S.mon[f.id]=S.mon[f.id]||{};S.mon[f.id][r.id]={...monDefault(r.A)};
   (S.tested[f.id]=S.tested[f.id]||{})[r.id]=d})});
- const rest=allAssets().filter(a=>!used.has(a.id)&&['att','vz','tmo','net','wire','starlink','iridium','mesh','hf'].some(p=>a.path.includes(p)));
+ const rest=allAssets().filter(a=>!used.has(a.id)&&['att','vz','tmo','net','pstn','starlink','iridium','mesh','hf'].some(p=>a.path.includes(p)));
  const seen=new Set();rest.forEach(a=>{const k=a.path.join('+');if(seen.has(k)||S.alts.length>=4)return;seen.add(k);S.alts.push({id:a.id,contact:sampleContact(a,n++),note:'Spare method'})});
  gates().forEach(g=>{if(g.att)S.attest[g.att]=true});
  S.tab=activeFns()[0].id;render();window.scrollTo({top:0})}
@@ -1068,6 +1110,9 @@ const ACT={
  addFn:()=>{const n=$('newfn').value.trim();if(!n)return toast('Name the function first');const id='f'+Date.now();
   S.fns.push({id,name:n,type:$('newtype').value,on:true,custom:true,...(T().fnx?{pri:2,rto:'4 hours'}:{})});render();toast('Function added')},
  tab:d=>{S.tab=d.id;render()},
+ xwSec:d=>{const x=xwSec(d.id);x.on=!x.on;render()},
+ xwDep:d=>{const v=(depOf(d.a,d.b)+1)%3;S.xw.dep[d.a+'>'+d.b]=v;render()},
+ secFn:()=>{const s=SEC[S.sector];if(!s)return;S.fns.push({id:'f'+Date.now(),name:s.fn,type:'any',on:true,custom:true,pri:1,rto:'4 hours',ro:''});render();toast('Function added')},
  rate:d=>{const a=asset(d.id);const r=[...effR(a)];r[+d.k]=+d.v;S.rate[d.id]=r;render()},
  resetAuto:()=>{delete S.manual[curTab()];render();toast('Back to the auto-built ladder')},
  attest:d=>{S.attest[d.k]=!S.attest[d.k];save();light()},
@@ -1086,7 +1131,8 @@ const CHG={
  mon:t=>{const o=monSet(curTab(),t.dataset.id);const df=monDefault(asset(t.dataset.id));o.m=t.value;if(o.m==='trig'){o.t=o.t||[...(df.t.length?df.t:DEFT)];if(o.rd===undefined)o.rd='15 minutes'}render()},
  cad:t=>{const f=curTab();(S.cad[f]=S.cad[f]||{})[t.dataset.id]=t.value;save();light()},
  fntype:t=>{const f=S.fns[+t.dataset.idx];f.type=t.value;delete S.manual[f.id];render()},
- fnpri:t=>{S.fns[+t.dataset.idx].pri=+t.value;render()}};
+ fnpri:t=>{S.fns[+t.dataset.idx].pri=+t.value;render()},
+ sector:t=>{S.sector=t.value;render()}};
 document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(a&&ACT[a.dataset.act]){if(a.type!=='checkbox')e.preventDefault();ACT[a.dataset.act](a.dataset,a)}});
 document.addEventListener('input',e=>{const t=e.target,b=t.dataset.bind;if(!b)return;const k=b.split('.');let o=S;for(let i=0;i<k.length-1;i++){o[k[i]]=o[k[i]]||{};o=o[k[i]]}o[k[k.length-1]]=t.value;save();light()});
 document.addEventListener('change',e=>{const t=e.target;if(t.dataset.chg)CHG[t.dataset.chg](t);else if(t.dataset.rer)render()});
@@ -1096,7 +1142,7 @@ $('onbC').addEventListener('input',e=>{const t=e.target;if(t.dataset&&t.dataset.
 $('onbC').addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.w)wzIn(t,t.dataset.w,'change')});
 $('loadfile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;if(f.size>5e6)return toast('That file is too large');const r=new FileReader();r.onload=()=>loadFromText(String(r.result));r.onerror=()=>toast('Could not read that file');r.readAsText(f)});
 loadState();render();
-let seen=false;try{seen=!!localStorage.getItem('pace-snap-onb')}catch(e){}if(!seen)onbOpen();
+let seen=false;try{seen=!!localStorage.getItem('pace-biz-onb')}catch(e){}if(!seen)onbOpen();
 </script>
 </body>
 </html>
