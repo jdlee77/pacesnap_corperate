@@ -29,6 +29,22 @@ A CEO's question is not "which radio do we use?" but **"when something breaks, c
 - **Trigger `cyber`:** a triggered rung counts as listening in the ransomware drill if it switches on when a cyber incident is declared.
 - **Storage keys** are `pace-biz-v1-*`, so this app does not collide with the public-safety app on the same `jdlee77.github.io` origin. Save files are `app: pace-snap-biz`.
 
+## How the two apps work together
+
+PACE Snap (public safety) and PACE Snap for Business Continuity use the same method and engine but face each other:
+
+- **Public safety app:** "how counties, partners, responders and leadership reach *the agency*." Its shared plan PDF is what an agency hands to partners, including companies.
+- **Business app:** "how employees, customers, partners and *responders* reach *the company*." Its public safety contact sheet is what a company hands to agencies.
+
+The handoff today is by file: a PDF, a .vcf and a `pace-snap-responder-1` CSV going one way, and the agency's shared plan PDF going the other. The design choice behind the sheet: it is built from a real PACE ladder in the plan, so it inherits distinct paths, the drills and the monitoring, rather than being a separate list that drifts out of date. On top of that it adds checks that only matter for responders: staffed 24/7, not also published to customers, caller verification, and what the person who answers can authorize.
+
+### Next steps for the bridge
+
+1. **Import in the public safety app.** Done in `jdlee77/pacesnap`: Agency, State and Region plans have a Private-sector partners section that imports `pace-snap-responder-1` CSVs (one file, many files, or a combined directory), flags draft and overdue sheets, and exports a partner directory as PDF or CSV. Partner numbers are kept out of the agency's shared plan.
+2. **Reverse export.** A matching export from the public safety app (for example `pace-snap-agency-1`), so a company's Sector or Crosswalk plan can import the county or state EOC and private-sector liaison contacts.
+3. **Directory roll-up.** Partly done: the partner directory CSV re-exports in the same schema. Still to do: sort and filter by sector and location, and a sector field on the company sheet.
+4. **Verification.** A shared, offline-friendly verification practice (for example, a callback through the published dispatch line) that both apps print on their sheets.
+
 ## Open questions for the team
 
 1. **Names.** Is "Crosswalk" the right word for the cross-sector level, or would "Cross-sector" or "Lifeline" read better to industry? Should the product be called "PACE Snap Business" or something else?
@@ -45,3 +61,4 @@ A CEO's question is not "which radio do we use?" but **"when something breaks, c
 
 - No automated test suite. Checks so far: a headless smoke test that loads the sample at every level, confirms every gate passes, and exports both PDFs and the CSV with no script errors; plus a check that a typical company kit is lost in the hurricane drill and recovers when satellite text and a runner are added.
 - The guided setup still covers only the Frontline level.
+- The public safety contact sheet is tested by script (readiness, the privacy and 24/7 checks, exports on every level, and adding the ladder to older saved plans), not yet by a 911 center or EOC importing the files.
