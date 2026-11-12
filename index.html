@@ -171,6 +171,10 @@ table.xwm td.self{color:var(--muted)}
 .dep.lv2{background:var(--bad-bg);color:var(--bad);border-color:var(--bad);font-weight:600}
 .chip.okc{border-color:var(--good);color:var(--good)}.chip.noc{border-color:var(--bad);color:var(--bad);white-space:normal}
 
+/* public safety sheet */
+.locrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.3fr) auto;gap:8px;align-items:end;padding:8px 0;border-top:1px solid var(--line)}
+@media(max-width:760px){.locrow{grid-template-columns:1fr}}
+
 /* tables */
 .tw{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:13.5px}
@@ -252,6 +256,7 @@ textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:12px;ba
   <div id="matrix" style="display:contents"></div>
   <div id="drill" style="display:contents"></div>
   <div id="ready" style="display:contents"></div>
+  <div id="rsheet" style="display:contents"></div>
 </div></main>
 <div class="toast" id="toast" role="status"></div>
 <input type="file" id="loadfile" accept=".json,application/json" hidden>
@@ -408,7 +413,7 @@ const TIERS={
   kitIntro:'Select the communications the site has or can reach.',
   gd:{acc:'Backup channels fit the site emergency action plan and will not interfere with life-safety systems or responders.',suit:'Each rung lists a mode, and every person on shift is trained and equipped to use it.'},
   assets:ASSETS_SITE,scen:SCEN_SITE,
-  fns:[F('cmd','The incident team reaches site leaders','voice'),F('shf','Site leaders reach the shift','any'),F('acc','Workers check in (accountability)','any'),F('saf','Anyone can raise a life-safety emergency','voice'),F('res','The site requests resources and support','any'),F('ven','Key suppliers and contractors reach the site','any')]},
+  fns:[F('cmd','The incident team reaches site leaders','voice'),F('ps','Fire, police and EMS reach the site (24/7, not public)','voice',{ps:true}),F('shf','Site leaders reach the shift','any'),F('acc','Workers check in (accountability)','any'),F('saf','Anyone can raise a life-safety emergency','voice'),F('res','The site requests resources and support','any'),F('ven','Key suppliers and contractors reach the site','any')]},
  company:{label:'Company',sub:'CEO · crisis team',doc:'COMPANY CONTINUITY PACE PLAN',h1:'Keep the company able to shift.',
   intro:'For the CEO, the crisis management team and the business continuity lead. This is how leaders convene, how employees, customers, suppliers and regulators reach you, and how you keep coordinating when a storm, a cyber incident or a vendor failure takes out the usual tools. Each essential function gets a priority, a recovery time objective (RTO) and an owner. Availability and power count most, because continuity is the goal.',
   whoL:'Company',whoP:'e.g. Example Logistics, Inc.',baseL:'Headquarters / footprint',baseP:'e.g. Atlanta HQ, 42 sites in 9 states',
@@ -418,7 +423,7 @@ const TIERS={
   kitIntro:'Select the systems, services and agreements the company has today.',
   gd:{acc:'Backup paths will not interfere with operations and line up with the business continuity, incident response and crisis communications plans.',suit:'Each rung lists a mode, and its capacity and staffing meet the function\'s needs.',extra:{k:'Executive sign-off',d:'The CEO or crisis team lead has reviewed the plan, the activation authority, and the RTOs.',att:'exec'}},
   assets:ASSETS_CO,scen:SCEN_CO,
-  fns:[F('cmt','Crisis team convenes and reaches the CEO','voice',{pri:1,rto:'1 hour'}),F('emp','Employees get alerts and report they are safe','alert',{pri:1,rto:'30 minutes'}),F('ir','Incident response team coordinates out-of-band','any',{pri:1,rto:'1 hour'}),F('ops','Sites and field operations reach headquarters','voice',{pri:1,rto:'1 hour'}),F('cus','Customers reach us and get updates','any',{pri:1,rto:'4 hours'}),F('sup','Critical suppliers and vendors reach us','any',{pri:2,rto:'4 hours'}),F('reg','Board, regulators, insurer and law enforcement reach us','voice',{pri:2,rto:'4 hours'})]},
+  fns:[F('cmt','Crisis team convenes and reaches the CEO','voice',{pri:1,rto:'1 hour'}),F('ps','Public safety reaches us (24/7, not public)','voice',{pri:1,rto:'Immediate',ps:true}),F('emp','Employees get alerts and report they are safe','alert',{pri:1,rto:'30 minutes'}),F('ir','Incident response team coordinates out-of-band','any',{pri:1,rto:'1 hour'}),F('ops','Sites and field operations reach headquarters','voice',{pri:1,rto:'1 hour'}),F('cus','Customers reach us and get updates','any',{pri:1,rto:'4 hours',pubf:true}),F('sup','Critical suppliers and vendors reach us','any',{pri:2,rto:'4 hours'}),F('reg','Board, regulators, insurer and law enforcement reach us','voice',{pri:2,rto:'4 hours'})]},
  sector:{label:'Sector',sub:'ISAC · council',doc:'SECTOR PACE PLAN',h1:'Keep your sector coordinated.',
   intro:'For an ISAC, a sector coordinating council, a mutual-assistance group or an industry association. This is how member companies, government partners and neighboring sectors reach you when member systems are down. Each function gets a priority, an RTO, an owner, and a reach-out point outside the impact area. Availability and Compatibility count most, because you must reach members whose systems you do not control.',
   whoL:'Sector organization',whoP:'e.g. Gulf Coast Utilities Mutual Assistance Group',baseL:'Coverage area',baseP:'e.g. AL, FL, LA, MS, TX',
@@ -428,7 +433,7 @@ const TIERS={
   kitIntro:'Select the channels the sector runs, shares or has agreements to use.',
   gd:{acc:'Backup paths will not interfere with members\' own continuity plans, and fit the sector\'s information-sharing rules (such as TLP).',suit:'Each rung lists a mode, and its capacity and staffing meet the function\'s needs.',extra:{k:'Sector council review',d:'The sector coordinating council, ISAC board or equivalent has reviewed the plan.',att:'gov'}},
   assets:ASSETS_SEC,scen:SCEN_SEC,
-  fns:[F('ops','Member companies reach the sector operations center','voice',{pri:1,rto:'1 hour',ro:''}),F('thr','Threat and incident information is shared with members','data',{pri:1,rto:'1 hour',ro:''}),F('gov','Government partners reach us (CISA, sector risk agency, state EOC)','voice',{pri:1,rto:'1 hour',ro:''}),F('mut','Members request and offer mutual assistance','any',{pri:1,rto:'4 hours',ro:''}),F('sts','Member operating status reaches us','data',{pri:2,rto:'4 hours',ro:''}),F('pub','Coordinated public messaging','alert',{pri:2,rto:'4 hours',ro:''})]},
+  fns:[F('ops','Member companies reach the sector operations center','voice',{pri:1,rto:'1 hour',ro:''}),F('thr','Threat and incident information is shared with members','data',{pri:1,rto:'1 hour',ro:''}),F('gov','Government partners reach us (CISA, sector risk agency, state EOC)','voice',{pri:1,rto:'1 hour',ro:'',ps:true}),F('mut','Members request and offer mutual assistance','any',{pri:1,rto:'4 hours',ro:''}),F('sts','Member operating status reaches us','data',{pri:2,rto:'4 hours',ro:''}),F('pub','Coordinated public messaging','alert',{pri:2,rto:'4 hours',ro:'',pubf:true})]},
  crosswalk:{label:'Crosswalk',sub:'Cross-sector',doc:'CROSS-SECTOR CROSSWALK PLAN',h1:'Keep sectors connected to each other.',
   intro:'For a business emergency operations center (BEOC), a regional public-private partnership, or a group of lifeline sectors. Sectors depend on each other: water needs power, power needs communications and fuel, and everyone needs transportation. This plan maps those dependencies and sets out how sectors and government reach each other when one of them fails. Compatibility counts most, because a link that one sector cannot use is not a link.',
   whoL:'Partnership or coordination cell',whoP:'e.g. Gulf Coast Business EOC',baseL:'Region covered',baseP:'e.g. FEMA Region 4 coastal counties',
@@ -438,7 +443,7 @@ const TIERS={
   kitIntro:'Select the shared channels and agreements the participating sectors can really rely on.',
   gd:{acc:'Backup paths will not interfere with any sector\'s own continuity plan or with government emergency operations.',suit:'Each rung lists a mode, and its capacity and staffing meet the function\'s needs.',extra:{k:'Partner concurrence',d:'Each participating sector has reviewed the plan and agreed to the shared channels, bridges and liaisons.',att:'gov'}},
   assets:ASSETS_XW,scen:SCEN_XW,
-  fns:[F('beoc','Sectors reach the business EOC / coordination cell','voice',{pri:1,rto:'1 hour',ro:''}),F('dep','A sector we depend on reaches us, and we reach it','voice',{pri:1,rto:'1 hour',ro:''}),F('lif','Lifeline status is exchanged (power, communications, fuel, water, transport)','data',{pri:1,rto:'4 hours',ro:''}),F('res','Cross-sector resource requests (fuel, generators, crews, access)','any',{pri:1,rto:'4 hours',ro:''}),F('gov','Government EOC and ESF leads reach the private sector','voice',{pri:1,rto:'1 hour',ro:''}),F('pub','Joint public information','alert',{pri:2,rto:'4 hours',ro:''})]}
+  fns:[F('beoc','Sectors reach the business EOC / coordination cell','voice',{pri:1,rto:'1 hour',ro:''}),F('dep','A sector we depend on reaches us, and we reach it','voice',{pri:1,rto:'1 hour',ro:''}),F('lif','Lifeline status is exchanged (power, communications, fuel, water, transport)','data',{pri:1,rto:'4 hours',ro:''}),F('res','Cross-sector resource requests (fuel, generators, crews, access)','any',{pri:1,rto:'4 hours',ro:''}),F('gov','Government EOC and ESF leads reach the private sector','voice',{pri:1,rto:'1 hour',ro:'',ps:true}),F('pub','Joint public information','alert',{pri:2,rto:'4 hours',ro:'',pubf:true})]}
 };
 
 /* Where the plan supports common continuity and incident standards. gates = the readiness gates that evidence it. Topic-level references only: not a compliance determination. */
@@ -458,10 +463,12 @@ const STDS=[
 let TIER='frontline';try{TIER=localStorage.getItem('pace-biz-tier')||'frontline'}catch(e){}if(!TIERS[TIER])TIER='frontline';
 const T=()=>TIERS[TIER];
 let S,SCEN,ASSETS;
-const fresh=()=>({sample:false,who:'',by:'',base:'',act:'',sector:'',xw:{sec:{},dep:{}},
+const fresh=()=>({sample:false,who:'',by:'',base:'',act:'',sector:'',xw:{sec:{},dep:{}},rs:{caps:[],auth:'',verify:'',locs:[]},
  fns:JSON.parse(JSON.stringify(T().fns)),inv:{},custom:[],alts:[],manual:{},rate:{},contact:{},owner:{},mode:{},mon:{},tested:{},cad:{},trig:{},attest:{acc:false,suit:false},tab:T().fns[0].id});
 function loadState(){SCEN=T().scen;ASSETS=T().assets;let raw=null;try{raw=localStorage.getItem('pace-biz-v1-'+TIER)}catch(e){}
- try{S=Object.assign(fresh(),raw?JSON.parse(raw):{})}catch(e){S=fresh()}}
+ try{S=Object.assign(fresh(),raw?JSON.parse(raw):{})}catch(e){S=fresh()}
+ /* Plans saved before the public safety ladder existed get it added, and keep their flags in step with the template. */
+ T().fns.forEach(tf=>{if(!tf.ps&&!tf.pubf)return;const ex=S.fns.find(f=>f.id===tf.id);if(!ex){if(tf.ps)S.fns.splice(1,0,JSON.parse(JSON.stringify(tf)))}else{if(tf.ps)ex.ps=true;if(tf.pubf)ex.pubf=true}})}
 const save=()=>{try{localStorage.setItem('pace-biz-v1-'+TIER,JSON.stringify(S));localStorage.setItem('pace-biz-tier',TIER)}catch(e){}};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -724,8 +731,8 @@ function renderReady(){if(!invList().length){$('ready').innerHTML='';return}
  <div class="row"><button type="button" class="btn pri" data-act="pdf">Download shared plan (PDF)</button><button type="button" class="btn" data-act="pdfFull">Planning report (PDF)</button><button type="button" class="btn" data-act="allPdf">All plans (one PDF)</button><button type="button" class="btn" data-act="csv">Export CSV</button><button type="button" class="btn" data-act="copy">Copy as text</button><button type="button" class="btn" data-act="reset">${RESETARM?'Erase this plan? Click again':'Start over'}</button></div>
  <label class="row" style="gap:6px;font-size:13px"><input type="checkbox" data-act="csvc" ${CSVC?'checked':''}> Include contact details in the CSV (numbers, frequencies, call signs, names, reach-out points). Leave off when compiling plans across organizations.</label>
  <textarea id="out" readonly aria-label="Plan as plain text">${esc(planText())}</textarea></section>`}
-function render(){curTab();computeAutos();renderHead();renderFns();renderXW();renderStatus();renderKit();renderPlan();renderMatrix();renderDrill();renderReady();save()}
-function light(){renderStatus();renderMatrix();renderDrill();renderReady()}
+function render(){curTab();computeAutos();renderHead();renderFns();renderXW();renderStatus();renderKit();renderPlan();renderMatrix();renderDrill();renderReady();renderRS();save()}
+function light(){renderStatus();renderMatrix();renderDrill();renderReady();rsStatus()}
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),2200)}
 
 /* ================= export ================= */
@@ -899,6 +906,96 @@ async function exportAll(btn){const label=btn&&btn.textContent;if(btn){btn.disab
  if(doc){doc.setProperties({title:'PACE plans - how to reach us',subject:'PACE contact plans',creator:'PACE Snap'});doc.save(`PACE-All-Plans-${new Date().toISOString().slice(0,10)}.pdf`);toast(`${n} plan${n===1?'':'s'} in one PDF`)}
  else if(!n)toast('No plans to export yet. Build at least one first.');
  const b2=btn&&document.getElementById(btn.id);if(b2){b2.disabled=false}}
+/* ================= public safety contact sheet =================
+   A sheet for fire, police, EMS, emergency managers and fusion centers: the company's 24/7, non-public numbers,
+   built from the ladder of the function flagged ps. It is the bridge to the public-safety edition of PACE Snap. */
+const RS_CAPS=[{id:'access',n:'Site access, keys and gate codes'},{id:'hazmat',n:'Hazardous materials and chemical inventory'},{id:'util',n:'Utility and process shutoff'},{id:'status',n:'Facility status and damage reports'},{id:'staff',n:'Employee accountability and evacuation status'},{id:'res',n:'Resources we can offer (fuel, generators, vehicles, water, space)'},{id:'cyber',n:'Cyber incident coordination with law enforcement'},{id:'video',n:'Security video and incident reports'}];
+const RS_REVIEW=90;
+const psFn=()=>activeFns().find(f=>f.ps);
+/* Key for the privacy check: only phone numbers and email or chat handles can leak, not a place such as a liaison desk. */
+const normC=s=>{s=String(s||'');if(!s.includes('@')&&(s.match(/\d/g)||[]).length<7)return'';return s.toLowerCase().replace(/[^a-z0-9@.]/g,'')};
+const rsData=()=>{S.rs=S.rs||{};S.rs.caps=S.rs.caps||[];S.rs.locs=S.rs.locs||[];return S.rs};
+function rsView(){const f=psFn();if(!f||!invList().length)return null;const v=view(f.id),R=rsData();
+ const pub=new Map();activeFns().filter(x=>x.pubf).forEach(x=>view(x.id).rows.forEach(r=>{const k=normC(r.contact);if(k)pub.set(k,x.name)}));
+ (S.alts||[]).forEach(a=>{const k=normC(a.contact);if(k&&!pub.has(k))pub.set(k,'Backup methods (shared plan)')});
+ const rows=v.rows.map(r=>{const is=[];if(!r.A)is.push('Empty rung');else{if(!r.contact.trim())is.push('No contact yet');if(r.mon.m!=='always')is.push('Not staffed 24/7: '+monShort(r.mon));const p=pub.get(normC(r.contact));if(p)is.push('Also listed under "'+p+'", so it is not private')}return{...r,is}});
+ const open=[...rows.filter(r=>r.is.length).map(r=>`${r.l.name}: ${r.is.join('; ')}`)];
+ if(!(R.verify||'').trim())open.push('Say how you verify that a caller really is public safety');
+ if(!(R.auth||'').trim())open.push('Say who answers and what they can authorize');
+ if(!R.caps.length)open.push('Pick at least one thing you can do for responders');
+ const due=new Date();due.setDate(due.getDate()+RS_REVIEW);
+ return{f,rows,open,ok:!open.length,review:due.toISOString().slice(0,10),R}}
+function rsStatus(){const el=$('rsStat');if(!el)return;const x=rsView();if(!x){el.innerHTML='';return}
+ el.innerHTML=`<div class="${x.ok?'flag good':'flag warn'}">${x.ok?'<b>Ready to share.</b> Every number reaches a desk staffed 24/7, none of them is on a public-facing ladder, and responders know what you can do.':`<b>Not ready yet.</b> Exports are marked Draft until these are fixed:<ul class="alts">${x.open.map(o=>`<li>${esc(o)}</li>`).join('')}</ul>`}</div>
+ <div class="tw"><table><thead><tr><th></th><th>24/7 contact</th><th>Method</th><th>Answered by</th><th>Check</th></tr></thead><tbody>${x.rows.map(r=>`<tr><td><span class="lvl sm ${r.l.c}">${r.l.k}</span></td><td><b>${esc(r.contact||'(not set)')}</b></td><td>${r.A?esc(r.A.name):'<span class="muted">empty</span>'}</td><td>${esc(r.owner||'')}</td><td>${r.is.length?`<span class="chip noc">${esc(r.is.join('; '))}</span>`:'<span class="chip okc">24/7, private</span>'}</td></tr>`).join('')}</tbody></table></div>`}
+function renderRS(){const x=rsView();if(!x||!T().owner){$('rsheet').innerHTML='';return}const R=x.R;
+ $('rsheet').innerHTML=`<section class="card" id="rscard"><h2><span class="n">6</span>Public safety contact sheet</h2>
+ <p class="muted">A one-page sheet for fire, police, EMS, emergency managers and fusion centers. It lists numbers that reach a desk staffed 24 hours a day, that are <b>not published to the general public</b>, and that put a responder through to someone who can act. It is built from your <b>${esc(x.f.name)}</b> ladder.</p>
+ <div class="tip"><b>Where it goes.</b> Give it to your local 911 center (for the premise or caution notes in their dispatch system), your county and state emergency management offices, and your fusion center. Agencies that plan with PACE Snap for public safety can enter it as a partner or a backup method in their own plan.</div>
+ <div class="row" style="gap:8px"><button type="button" class="btn sm" data-act="rsEdit">Edit the ${esc(x.f.name)} ladder</button></div>
+ <div id="rsStat"></div>
+ <div><div class="muted" style="font-size:13px;margin-bottom:4px">What the person who answers can do for responders</div><div class="evs" role="group" aria-label="What you can do for responders">${RS_CAPS.map(c=>`<button type="button" class="ev" data-act="rsCap" data-id="${c.id}" aria-pressed="${R.caps.includes(c.id)}">${esc(c.n)}</button>`).join('')}</div></div>
+ <div class="grid2"><label class="fld">Who answers, and what they can authorize<input type="text" id="rs-auth" data-bind="rs.auth" value="${esc(R.auth||'')}" placeholder="e.g. Security operations supervisor: site access, shutoffs, release of video"></label>
+ <label class="fld">How you verify the caller is public safety<input type="text" id="rs-verify" data-bind="rs.verify" value="${esc(R.verify||'')}" placeholder="e.g. We call back through your dispatch center's published line"></label></div>
+ <h3>Locations</h3><p class="muted">Optional. Sites responders may be sent to, with an on-site 24/7 contact and anything they should know before arrival. Never put gate codes or alarm codes here: give them by phone after verifying the caller.</p>
+ ${R.locs.map((l,i)=>`<div class="locrow"><label class="fld">Site<input type="text" id="rl-n-${i}" data-bind="rs.locs.${i}.name" value="${esc(l.name||'')}" placeholder="e.g. Distribution Center 7"></label><label class="fld">Address<input type="text" id="rl-a-${i}" data-bind="rs.locs.${i}.addr" value="${esc(l.addr||'')}" placeholder="Street, city"></label><label class="fld">On-site 24/7 contact<input type="text" id="rl-c-${i}" data-bind="rs.locs.${i}.contact" value="${esc(l.contact||'')}" placeholder="Guard desk number"></label><label class="fld">Before you arrive<input type="text" id="rl-x-${i}" data-bind="rs.locs.${i}.notes" value="${esc(l.notes||'')}" placeholder="e.g. Knox box at main gate, ammonia refrigeration"></label><button type="button" class="btn sm" data-act="rsLocDel" data-idx="${i}" aria-label="Remove location">Remove</button></div>`).join('')}
+ <div><button type="button" class="btn sm" data-act="rsLocAdd">Add a location</button></div>
+ <h3>Export for public safety</h3>
+ <div class="row"><button type="button" class="btn pri" data-act="rsPdf">Responder contact sheet (PDF)</button><button type="button" class="btn" data-act="rsVcf">Phone contacts (.vcf)</button><button type="button" class="btn" data-act="rsCsv">Dispatch / EOC import (CSV)</button></div>
+ <div class="flag warn">These files contain non-public numbers. Send them only to public safety agencies, over a channel you trust, and send a fresh copy at least every ${RS_REVIEW} days or whenever a number changes.</div>
+ </section>`;rsStatus()}
+
+const rsWho=()=>S.who||T().label;
+const rsCaps=R=>RS_CAPS.filter(c=>R.caps.includes(c.id)).map(c=>c.n);
+const telOf=c=>{const s=String(c||'');if(s.includes('@'))return'';const head=s.split(',')[0];return (head.match(/\d/g)||[]).length>=7?head.trim():''};
+function buildRSCSV(){const x=rsView(),R=x.R,now=new Date().toISOString().slice(0,10);
+ const H=['schema','exported','review_by','status','organization','plan_level','location','address','rung','method','contact_24_7','monitoring','answered_by','can_authorize','verification','capabilities','notes'];
+ const base=r=>['pace-snap-responder-1',now,x.review,x.ok?'ready':'draft',rsWho(),T().label,...r];
+ const rows=[H];
+ x.rows.forEach(r=>rows.push(base(['(all locations)',S.base||'',r.l.name,r.A?r.A.name:'',r.contact,r.A?MONLAB[r.mon.m]:'',r.owner||'',R.auth||'',R.verify||'',rsCaps(R).join(' | '),r.i<3?'If no answer: '+r.trig:'Last resort'])));
+ R.locs.filter(l=>(l.name||l.addr||l.contact||'').trim()).forEach(l=>rows.push(base([l.name||'',l.addr||'','Site','On-site desk',l.contact||'','','','','','',l.notes||''])));
+ return '\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n')+'\r\n'}
+function buildVCF(){const x=rsView(),R=x.R,org=rsWho();
+ const e=s=>String(s??'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/([,;])/g,'\\$1');
+ const card=(fn,lines)=>['BEGIN:VCARD','VERSION:3.0','FN:'+e(fn),'ORG:'+e(org),...lines,'END:VCARD'].join('\r\n');
+ const note=['FOR PUBLIC SAFETY USE ONLY. NOT FOR PUBLIC RELEASE.','Call in order, P to E. Every number is staffed 24/7.',...x.rows.map(r=>`${r.l.k} ${r.l.name}: ${r.contact||'(not set)'}${r.A?' ('+r.A.name+')':''}`),R.auth?'Answers: '+R.auth:'',R.verify?'Verification: '+R.verify:'',R.caps.length?'Can help with: '+rsCaps(R).join('; '):'','Review by '+x.review].filter(Boolean).join('\n');
+ let k=0;const tels=x.rows.filter(r=>telOf(r.contact)).flatMap(r=>{k++;return[`item${k}.TEL;TYPE=WORK,VOICE:${e(telOf(r.contact))}`,`item${k}.X-ABLabel:${e(r.l.k+' '+r.l.name+' 24/7')}`]});
+ const cards=[card(org+' (24/7 public safety line)',[...tels,'NOTE:'+e(note)])];
+ R.locs.filter(l=>(l.name||'').trim()).forEach(l=>{const t=telOf(l.contact);cards.push(card(org+' - '+l.name,[...(t?['TEL;TYPE=WORK,VOICE:'+e(t)]:[]),...(l.addr?['ADR;TYPE=WORK:;;'+e(l.addr)+';;;;']:[]),'NOTE:'+e(['FOR PUBLIC SAFETY USE ONLY.',l.contact&&!t?'Contact: '+l.contact:'',l.notes?'Before you arrive: '+l.notes:'','Company 24/7 line: '+(x.rows.find(r=>r.contact)||{}).contact].filter(Boolean).join('\n'))]))});
+ return cards.join('\r\n')+'\r\n'}
+function buildRSPDF(){const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'pt',format:'letter'});const x=rsView(),R=x.R,t=T();
+ const W=612,H=792,M=40,CW=W-2*M;const C={ink:[18,33,42],muted:[85,102,110],line:[200,210,212],accent:[14,106,130],white:[255,255,255],bad:[180,46,46],warn:[168,101,0],panel:[243,246,246],lv:[[60,140,62],[217,180,0],[224,122,31],[199,59,59]]};
+ const who=pdfSafe(rsWho()),today=new Date().toISOString().slice(0,10);
+ const base={theme:'grid',rowPageBreak:'avoid',margin:{left:M,right:M,top:M+10,bottom:56},styles:{font:'helvetica',fontSize:9,cellPadding:5,textColor:C.ink,lineColor:C.line,lineWidth:.5,valign:'middle',overflow:'linebreak'},headStyles:{fillColor:C.ink,textColor:C.white,fontStyle:'bold',fontSize:7.5}};
+ let y;const ensure=n=>{if(y+n>H-70){doc.addPage();y=M+20}};
+ const heading=ti=>{ensure(50);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...C.ink);doc.text(pdfSafe(ti).toUpperCase(),M,y);doc.setDrawColor(...C.accent);doc.setLineWidth(1.5);doc.line(M,y+5,M+30,y+5);doc.setDrawColor(...C.line);doc.setLineWidth(.5);doc.line(M+30,y+5,W-M,y+5);y+=16};
+ doc.setFillColor(...C.ink);doc.rect(0,0,W,112,'F');
+ doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(125,200,220);doc.text('PUBLIC SAFETY CONTACT SHEET   |   24/7, NOT FOR PUBLIC RELEASE',M,36);
+ let fs=22;doc.setFontSize(fs);while(fs>11&&doc.getTextWidth(who)>CW-150){fs-=1;doc.setFontSize(fs)}doc.setTextColor(...C.white);doc.text(who,M,62);
+ doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(190,205,210);doc.text([S.base?pdfSafe(S.base):null,'Updated '+today,'Review by '+x.review].filter(Boolean).join('   |   '),M,84,{maxWidth:CW});
+ const pill=x.ok?'FOR PUBLIC SAFETY USE ONLY':'DRAFT - NOT READY';doc.setFont('helvetica','bold');doc.setFontSize(8.5);const pw=doc.getTextWidth(pill)+22;doc.setFillColor(...(x.ok?C.bad:C.warn));doc.roundedRect(W-M-pw,30,pw,22,4,4,'F');doc.setTextColor(...C.white);doc.text(pill,W-M-pw/2,44.5,{align:'center'});
+ y=136;const intro='For fire, police, EMS, emergency management and fusion center use. Call in order, from P to E: every number reaches a desk staffed 24 hours a day. Give your name, agency, a callback number through your dispatch center, and what you need. Do not publish these numbers or share them outside public safety.';
+ const il=doc.splitTextToSize(intro,CW-24);doc.setFillColor(...C.panel);doc.roundedRect(M,y-12,CW,il.length*11+16,4,4,'F');doc.setFillColor(...C.bad);doc.rect(M,y-12,3,il.length*11+16,'F');doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...C.ink);doc.text(il,M+14,y+1);y+=il.length*11+26;
+ heading('24/7 contact ladder');
+ doc.autoTable({...base,startY:y,head:[['','24/7 contact','Method','Answered by','If no answer']],body:x.rows.map(r=>[r.l.k,pdfSafe(r.contact||'(not set)'),r.A?pdfSafe(r.A.name):'(empty)',pdfSafe(r.owner||''),r.i<3?'Try '+LEVELS[r.i+1].name+' if: '+pdfSafe(r.trig):'Last resort']),
+  columnStyles:{0:{cellWidth:24,halign:'center',fontSize:13,fontStyle:'bold'},1:{cellWidth:150,fontStyle:'bold',fontSize:11},2:{cellWidth:120},3:{cellWidth:90}},
+  didParseCell:d=>{if(d.section==='body'){const r=x.rows[d.row.index];if(d.column.index===0)d.cell.styles.fillColor=C.lv[d.row.index];if(d.column.index===1&&r.is.length)d.cell.styles.textColor=C.bad}}});y=doc.lastAutoTable.finalY+20;
+ heading('Who answers and how we verify you');
+ doc.autoTable({...base,startY:y,body:[['Who answers / can authorize',pdfSafe(R.auth||'(not set)')],['How we verify callers',pdfSafe(R.verify||'(not set)')],[t.actL||'Plan activation',pdfSafe(S.act||'(not set)')]],columnStyles:{0:{cellWidth:150,fontStyle:'bold'}}});y=doc.lastAutoTable.finalY+20;
+ const caps=rsCaps(R);if(caps.length){heading('What we can do for you');doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...C.ink);caps.forEach((c,i)=>{const cx=M+(i%2)*(CW/2),cy=y+Math.floor(i/2)*15;doc.setFillColor(...C.accent);doc.rect(cx,cy-6,5,5,'F');doc.text(pdfSafe(c),cx+11,cy,{maxWidth:CW/2-16})});y+=Math.ceil(caps.length/2)*15+14}
+ const L=R.locs.filter(l=>(l.name||l.addr||l.contact||'').trim());if(L.length){heading('Locations');
+  doc.autoTable({...base,startY:y,head:[['Site','Address','On-site 24/7','Before you arrive']],body:L.map(l=>[pdfSafe(l.name),pdfSafe(l.addr),pdfSafe(l.contact),pdfSafe(l.notes)]),columnStyles:{0:{cellWidth:110,fontStyle:'bold'},2:{cellWidth:100,fontStyle:'bold'}}});y=doc.lastAutoTable.finalY+16}
+ const n=doc.getNumberOfPages();for(let p=1;p<=n;p++){doc.setPage(p);
+  if(!x.ok){doc.saveGraphicsState();doc.setGState(new doc.GState({opacity:.06}));doc.setFont('helvetica','bold');doc.setFontSize(110);doc.setTextColor(...C.warn);doc.text('DRAFT',W/2,H/2+60,{align:'center',angle:35});doc.restoreGraphicsState()}
+  if(p>1){doc.setFillColor(...C.ink);doc.rect(0,0,W,22,'F');doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...C.white);doc.text('PUBLIC SAFETY CONTACT SHEET  |  '+who.toUpperCase(),M,14);doc.setTextColor(255,170,160);doc.text('NOT FOR PUBLIC RELEASE',W-M,14,{align:'right'})}
+  doc.setDrawColor(...C.line);doc.setLineWidth(.5);doc.line(M,H-40,W-M,H-40);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...C.muted);
+  doc.text('For public safety use only. Not for public release. Built with PACE Snap for Business Continuity.',M,H-28);doc.text(`Page ${p} of ${n}`,W-M,H-28,{align:'right'})}
+ doc.setProperties({title:`Public safety contact sheet - ${who}`,subject:'24/7 non-public contacts for public safety',creator:'PACE Snap'});return doc}
+async function exportRSPDF(btn){const label=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Building PDF…'}
+ try{await loadPdfLibs()}catch(e){toast('Couldn\'t load the PDF engine. Connect to the internet and try again.');if(btn){btn.disabled=false;btn.textContent=label}return}
+ try{buildRSPDF().save(`Public-Safety-Contact-Sheet-${slug(rsWho())}-${new Date().toISOString().slice(0,10)}.pdf`);toast(rsView().ok?'Sheet downloaded. Share it only with public safety.':'Draft sheet downloaded. Fix the open items before sharing.')}
+ catch(e){console.error(e);toast('PDF export failed: '+e.message)}
+ if(btn){btn.disabled=false;btn.textContent=label}}
 /* ================= events ================= */
 /* ================= onboarding, save/load, csv ================= */
 let CSVC=false,ONB=0,SAMPLEARM=false,RESETARM=false;
@@ -1036,7 +1133,7 @@ function loadFromText(txt){let o;try{o=JSON.parse(txt)}catch(e){return toast('Th
  const mem={};let n=0;Object.keys(TIERS).forEach(k=>{const p=o.plans[k];if(!p||typeof p!=='object'||Array.isArray(p))return;const c=cleanPlan(k,p);mem[k]=c;n++;try{localStorage.setItem('pace-biz-v1-'+k,JSON.stringify(c))}catch(e){}});
  if(!n)return toast('No plans found in that file');
  TIER=TIERS[o.tier]&&mem[o.tier]?o.tier:Object.keys(mem)[0];loadState();if(mem[TIER])S=mem[TIER];render();window.scrollTo({top:0});toast(`Loaded ${n} plan${n===1?'':'s'}`)}
-function csvCell(v){v=String(v??'');if(/^[=+\-@\t\r]/.test(v))v="'"+v;return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function csvCell(v){v=String(v??'');if(/^[=+\-@\t\r]/.test(v)&&!/^\+[\d\s().-]+$/.test(v))v="'"+v;return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function buildCSV(inc){const t=T(),G=gates(),ok=G.filter(g=>g.ok).length,ready=G.every(g=>g.ok),now=new Date().toISOString().slice(0,10);
  const H=['schema','exported','tier','plan_name','location_or_area','prepared_by','activation_authority','sector','plan_ready','gates_passed','gates_total','function','function_type','priority_tier','rto','reach_out_point','rung','asset','failure_paths','mode','monitoring','monitor_triggers','ready_within','schedule','last_tested','test_cadence','step_down_trigger','contact','answered_by','note'];
  const base=[ 'pace-snap-biz-csv-1',now,t.label,S.who,S.base,inc?S.by:'',S.act||'',t.sectorPick&&S.sector?SEC[S.sector].name:'',ready?'yes':'no',ok,G.length];
@@ -1076,6 +1173,8 @@ function loadSample(){const t=T();S=fresh();S.sample=true;
   (S.tested[f.id]=S.tested[f.id]||{})[r.id]=d})});
  const rest=allAssets().filter(a=>!used.has(a.id)&&['att','vz','tmo','net','pstn','starlink','iridium','mesh','hf'].some(p=>a.path.includes(p)));
  const seen=new Set();rest.forEach(a=>{const k=a.path.join('+');if(seen.has(k)||S.alts.length>=4)return;seen.add(k);S.alts.push({id:a.id,contact:sampleContact(a,n++),note:'Spare method'})});
+ const pf=activeFns().find(f=>f.ps);if(pf){view(pf.id).rows.forEach(r=>{if(r.A)S.mon[pf.id][r.id]={m:'always',t:[],rd:'',sched:''}});
+  S.rs={caps:['access','hazmat','status','staff','res'],auth:'Security operations supervisor: site access, shutoffs, release of video',verify:'We call back through your dispatch center\'s published line before giving codes or hazmat details',locs:[{name:'Example Distribution Center',addr:'100 Example Way, Example City',contact:'(555) 010-300',notes:'Knox box at main gate. Ammonia refrigeration in building B.'}]}}
  gates().forEach(g=>{if(g.att)S.attest[g.att]=true});
  S.tab=activeFns()[0].id;render();window.scrollTo({top:0})}
 const ACT={
@@ -1110,6 +1209,13 @@ const ACT={
  addFn:()=>{const n=$('newfn').value.trim();if(!n)return toast('Name the function first');const id='f'+Date.now();
   S.fns.push({id,name:n,type:$('newtype').value,on:true,custom:true,...(T().fnx?{pri:2,rto:'4 hours'}:{})});render();toast('Function added')},
  tab:d=>{S.tab=d.id;render()},
+ rsEdit:()=>{const f=psFn();if(!f)return;S.tab=f.id;render();$('plan').querySelector('section').scrollIntoView({behavior:'smooth'})},
+ rsCap:d=>{const R=rsData();R.caps=R.caps.includes(d.id)?R.caps.filter(c=>c!==d.id):[...R.caps,d.id];render()},
+ rsLocAdd:()=>{rsData().locs.push({name:'',addr:'',contact:'',notes:''});render()},
+ rsLocDel:d=>{rsData().locs.splice(+d.idx,1);render()},
+ rsPdf:(d,el)=>exportRSPDF(el),
+ rsVcf:()=>{dl(`Public-Safety-Contacts-${slug(rsWho())}.vcf`,buildVCF(),'text/vcard;charset=utf-8');toast(rsView().ok?'Contacts file downloaded. Share it only with public safety.':'Draft contacts downloaded. Fix the open items before sharing.')},
+ rsCsv:()=>{dl(`Public-Safety-Contacts-${slug(rsWho())}-${new Date().toISOString().slice(0,10)}.csv`,buildRSCSV(),'text/csv;charset=utf-8');toast('CSV downloaded. It contains non-public numbers.')},
  xwSec:d=>{const x=xwSec(d.id);x.on=!x.on;render()},
  xwDep:d=>{const v=(depOf(d.a,d.b)+1)%3;S.xw.dep[d.a+'>'+d.b]=v;render()},
  secFn:()=>{const s=SEC[S.sector];if(!s)return;S.fns.push({id:'f'+Date.now(),name:s.fn,type:'any',on:true,custom:true,pri:1,rto:'4 hours',ro:''});render();toast('Function added')},
